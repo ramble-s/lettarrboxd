@@ -15,10 +15,11 @@ const envSchema = z.object({
   LETTERBOXD_TAKE_AMOUNT: z.string().optional().transform(val => val ? Number(val) : undefined).pipe(z.number().positive().optional()),
   LETTERBOXD_TAKE_STRATEGY: z.enum(['oldest', 'newest']).optional(),
   DRY_RUN: z.string().default('false').transform(val => val.toLowerCase() === 'true'),
-  SONARR_API_URL: z.string(),
-  SONARR_API_KEY: z.string(),
-  SONARR_QUALITY_PROFILE: z.string(),
-  LETTERBOXD_CLEANUP_ENABLED: z.string().default('false').transform(val => val.toLowerCase() === 'true'),
+  SONARR_ENABLED: z.string().default('false').transform(val => val.toLowerCase() === 'true'),
+  SONARR_API_URL: z.string().optional(),
+  SONARR_API_KEY: z.string().optional(),
+  SONARR_QUALITY_PROFILE: z.string().optional(),
+  RADARR_CLEANUP_ENABLED: z.string().default('false').transform(val => val.toLowerCase() === 'true'),
   LETTERBOXD_USERNAME: z.string().optional(),
   LETTERBOXD_CLEANUP_TAG: z.string().default('cleanup'),
   SONARR_CLEANUP_ENABLED: z.string().default('false').transform(val => val.toLowerCase() === 'true'),
@@ -33,16 +34,28 @@ const envSchema = z.object({
   message: "When using movie limiting, both LETTERBOXD_TAKE_AMOUNT and LETTERBOXD_TAKE_STRATEGY must be specified",
   path: ["LETTERBOXD_TAKE_AMOUNT", "LETTERBOXD_TAKE_STRATEGY"]
 }).refine(data => {
-  if (!data.LETTERBOXD_CLEANUP_ENABLED) return true;
+  if (!data.SONARR_ENABLED) return true;
+  return !!data.SONARR_API_URL && !!data.SONARR_API_KEY && !!data.SONARR_QUALITY_PROFILE;
+}, {
+  message: "SONARR_API_URL, SONARR_API_KEY, and SONARR_QUALITY_PROFILE are required when SONARR_ENABLED=true",
+  path: ["SONARR_ENABLED"]
+}).refine(data => {
+  if (!data.RADARR_CLEANUP_ENABLED) return true;
   return !!data.LETTERBOXD_USERNAME;
 }, {
-  message: "LETTERBOXD_USERNAME is required when LETTERBOXD_CLEANUP_ENABLED=true",
-  path: ["LETTERBOXD_CLEANUP_ENABLED"]
+  message: "LETTERBOXD_USERNAME is required when RADARR_CLEANUP_ENABLED=true",
+  path: ["RADARR_CLEANUP_ENABLED"]
 }).refine(data => {
   if (!data.SONARR_CLEANUP_ENABLED) return true;
   return !!data.LETTERBOXD_USERNAME;
 }, {
   message: "LETTERBOXD_USERNAME is required when SONARR_CLEANUP_ENABLED=true",
+  path: ["SONARR_CLEANUP_ENABLED"]
+}).refine(data => {
+  if (!data.SONARR_CLEANUP_ENABLED) return true;
+  return !!data.SONARR_ENABLED;
+}, {
+  message: "SONARR_ENABLED=true is required when SONARR_CLEANUP_ENABLED=true",
   path: ["SONARR_CLEANUP_ENABLED"]
 });
 
@@ -50,7 +63,7 @@ export type Env = z.infer<typeof envSchema>;
 
 function validateEnv(): Env {
   const result = envSchema.safeParse(process.env);
-  
+
   if (!result.success) {
     console.error('Environment validation failed:');
     result.error.issues.forEach(error => {
@@ -58,7 +71,7 @@ function validateEnv(): Env {
     });
     process.exit(1);
   }
-  
+
   return result.data;
 }
 

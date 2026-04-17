@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Fork of ryanpage/lettarrboxd. Syncs a Letterboxd list to Radarr (movies) and Sonarr (TV shows). Optionally deletes Radarr/Sonarr items when their Letterboxd diary entry is tagged with a cleanup tag. All features run on the same interval from a single container.
+Fork of ryanpage/lettarrboxd. Syncs a Letterboxd list to Radarr (movies) and, optionally, Sonarr (TV shows). Optionally deletes Radarr/Sonarr items when their Letterboxd diary entry is tagged with a cleanup tag. All enabled features run on the same interval from a single container.
+
+Sonarr sync is off by default — users who only want Radarr can run the container with Radarr vars alone. Set `SONARR_ENABLED=true` (plus `SONARR_API_URL`, `SONARR_API_KEY`, `SONARR_QUALITY_PROFILE`) to turn on TV sync.
 
 New modules added in this fork: `src/api/sonarr.ts` (TV sync), `src/api/cleanup.ts` (diary cleanup).
 
@@ -31,39 +33,39 @@ Required variables:
 - `RADARR_API_KEY` - Radarr API key
 - `RADARR_QUALITY_PROFILE` - Quality profile name (case-sensitive)
 
+Optional integrations (gated by feature flags):
+- `SONARR_ENABLED=true` activates Sonarr TV sync. When true, `SONARR_API_URL`, `SONARR_API_KEY`, and `SONARR_QUALITY_PROFILE` are all required (enforced by a Zod `.refine()`).
+- `RADARR_CLEANUP_ENABLED=true` activates Radarr diary cleanup. Requires `LETTERBOXD_USERNAME`.
+- `SONARR_CLEANUP_ENABLED=true` activates Sonarr diary cleanup. Requires `LETTERBOXD_USERNAME` *and* `SONARR_ENABLED=true`.
+- `LETTERBOXD_CLEANUP_TAG` (default `cleanup`) is the Letterboxd diary tag — shared by both Radarr and Sonarr cleanup, hence the `LETTERBOXD_` prefix (not `RADARR_`/`SONARR_`).
+
 Key validation rules:
 - `CHECK_INTERVAL_MINUTES` enforces minimum 10 minutes
 - Environment variables are transformed and validated using Zod schemas
 - The app exits early with clear error messages for invalid configuration
+- Sonarr and cleanup features are gated by their respective `*_ENABLED` flags, so calls into `upsertShows()` / `runCleanup()` / `runSonarrCleanup()` are skipped when disabled
 
 ## Architecture Overview
 
 ### Core Application Flow
 The application follows a scheduled monitoring pattern:
-1. **Scheduler** (`startScheduledMonitoring`) runs `processWatchlist()` at configured intervals
-2. **Incremental Processing** - Only new movies (not in previous `movies.json`) are processed
+1. **Scheduler** (`startScheduledMonitoring`) runs `run()` immediately and then every `CHECK_INTERVAL_MINUTES`
+2. **Per-tick pipeline** - `fetchMoviesFromUrl → upsertMovies → [upsertShows] → [runCleanup] → [runSonarrCleanup]`, with bracketed steps gated on their feature flags
 3. **Rate Limiting** - Built-in delays between API calls to respect external services
-4. **Persistent State** - Tracks processed movies in `DATA_DIR/movies.json` to avoid reprocessing
+4. **Health-check heartbeat** - Writes `DATA_DIR/.last-run` (ISO timestamp) after each successful tick; the container's health check fails if this file is older than 2 hours
+5. **Cleanup persistence** - When cleanup is enabled, handled diary slugs are tracked in `DATA_DIR/deleted-radarr.json` and `DATA_DIR/deleted-sonarr.json` so each slug is only processed once
 
 ### Module Separation
-- **`src/index.ts`** - Main orchestration, scheduling, and file I/O operations
+- **`src/index.ts`** - Main orchestration, scheduling, and file I/O operations. Gates optional integrations on their `*_ENABLED` env flags before calling into the respective modules.
 - **`src/scraper/`** - Web scraping and TMDB ID extraction logic
 - **`src/api/radarr.ts`** - Radarr API integration and movie management
-- **`src/api/sonarr.ts`** - Sonarr TV sync (fork addition)
-- **`src/api/cleanup.ts`** - Letterboxd diary cleanup (fork addition)
-- **`src/util/env.ts`** - Environment validation and configuration management
+- **`src/api/sonarr.ts`** - Sonarr TV sync (fork addition). `upsertShows()` early-returns if `SONARR_ENABLED` is false; the axios client throws if Sonarr creds are missing at call time.
+- **`src/api/cleanup.ts`** - Letterboxd diary cleanup (fork addition). Persists handled slugs to `/data/deleted-radarr.json` (movies) and `/data/deleted-sonarr.json` (TV shows) so they're only processed once.
+- **`src/util/env.ts`** - Environment validation and configuration management. Uses Zod `.refine()` to enforce conditional requirements (e.g. Sonarr vars required iff `SONARR_ENABLED=true`).
 
 ### Key Architectural Patterns
 
-**State Management**: The application maintains state through a `movies.json` file containing:
-```typescript
-interface MoviesData {
-  timestamp: string;
-  queryDate: string; 
-  totalMovies: number;
-  movies: Movie[];
-}
-```
+**State Management**: The application is stateless for the sync side — it always re-reads the Letterboxd list and lets Radarr/Sonarr deduplicate (the "already added" responses are handled silently). Cleanup persists handled slugs to `deleted-radarr.json` / `deleted-sonarr.json` so tagged diary entries are only processed once. `.last-run` is written for the health check.
 
 **Error Handling**: Each module handles errors gracefully without crashing the scheduler. Network failures and API errors are logged but don't stop the monitoring process.
 
@@ -83,11 +85,11 @@ Letterboxd scraping is implemented with:
 
 ### Function Organization
 The codebase is organized into small, focused functions:
-- `processWatchlist()` - High-level orchestration (19 lines)
-- `addMovieToRadarr(movie)` - Individual movie processing
-- `processNewMovies(movies)` - Batch processing with delays
-- `getAllWatchlistUrls()` - Pagination handling
-- `getTmdbIdFromMoviePage(url)` - TMDB ID extraction
+- `startScheduledMonitoring()` / `run()` (`src/index.ts`) - Scheduler and per-tick orchestration; `run()` sequences `fetchMoviesFromUrl → upsertMovies → [upsertShows] → [runCleanup] → [runSonarrCleanup]`, with bracketed steps gated on their feature flags.
+- `upsertMovies(movies)` (`src/api/radarr.ts`) - Radarr sync
+- `upsertShows(movies)` (`src/api/sonarr.ts`) - Sonarr sync (no-op when `SONARR_ENABLED=false`)
+- `runCleanup()` / `runSonarrCleanup()` (`src/api/cleanup.ts`) - Diary-tag-driven deletion
+- `fetchMoviesFromUrl(url)` (`src/scraper/`) - Scraping entry point that dispatches to the right scraper by URL shape
 
 ## Development Notes
 

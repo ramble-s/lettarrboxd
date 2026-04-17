@@ -21,6 +21,9 @@ let _axios: ReturnType<typeof Axios.create> | null = null;
 
 function getAxios(): ReturnType<typeof Axios.create> {
     if (!_axios) {
+        if (!env.SONARR_API_URL || !env.SONARR_API_KEY) {
+            throw new Error('Sonarr is not configured (SONARR_API_URL/SONARR_API_KEY missing). Set SONARR_ENABLED=true and provide Sonarr credentials.');
+        }
         _axios = Axios.create({
             baseURL: env.SONARR_API_URL,
             headers: { 'X-Api-Key': env.SONARR_API_KEY }
@@ -159,8 +162,15 @@ export async function deleteSeries(sonarrId: number, title: string): Promise<voi
 }
 
 export async function upsertShows(movies: LetterboxdMovie[]): Promise<void> {
+    if (!env.SONARR_ENABLED) return;
+
     const tvShows = movies.filter(m => m.tvTmdbId);
     if (tvShows.length === 0) return;
+
+    if (!env.SONARR_QUALITY_PROFILE) {
+        logger.error('SONARR_QUALITY_PROFILE is not set');
+        return;
+    }
 
     logger.info(`[sonarr] Processing ${tvShows.length} TV show(s)`);
 

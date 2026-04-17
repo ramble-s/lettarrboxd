@@ -16,6 +16,7 @@ jest.mock('../util/logger', () => ({
 }));
 
 const mockEnv = {
+  SONARR_ENABLED: true,
   SONARR_API_URL: 'http://localhost:8989',
   SONARR_API_KEY: 'test-sonarr-key',
   SONARR_QUALITY_PROFILE: 'HD-1080p',
@@ -205,6 +206,13 @@ describe('sonarr API', () => {
   });
 
   describe('upsertShows', () => {
+    it('returns early when SONARR_ENABLED is false', async () => {
+      mockEnv.SONARR_ENABLED = false;
+      await upsertShows([{ id: 1, name: 'Show', slug: '/film/show/', tvTmdbId: '999' }]);
+      expect(mockAxiosInstance.get).not.toHaveBeenCalled();
+      mockEnv.SONARR_ENABLED = true;
+    });
+
     it('returns early when no TV shows', async () => {
       await upsertShows([{ id: 1, name: 'Movie', slug: '/film/movie/' }]);
       expect(mockAxiosInstance.get).not.toHaveBeenCalled();

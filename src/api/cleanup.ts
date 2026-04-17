@@ -6,7 +6,7 @@ import { getMovie } from '../scraper/movie';
 import { findSeriesInSonarrByTmdbId, deleteSeries } from './sonarr';
 
 const DATA_DIR = process.env.DATA_DIR ?? '/data';
-const DELETED_FILE = `${DATA_DIR}/deleted.json`;
+const DELETED_FILE = `${DATA_DIR}/deleted-radarr.json`;
 const DELETED_SONARR_FILE = `${DATA_DIR}/deleted-sonarr.json`;
 const LB_BASE = 'https://letterboxd.com';
 const FETCH_HEADERS = { 'User-Agent': 'Mozilla/5.0' };

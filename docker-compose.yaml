@@ -4,20 +4,31 @@ services:
     image: ghcr.io/ramble-s/lettarrboxd:latest
     container_name: lettarrboxd
     environment:
-      # Required variables
+      # Required variables (Radarr only — minimum needed to run)
       - LETTERBOXD_URL=https://letterboxd.com/your_username/watchlist/
       - RADARR_API_URL=YOUR_RADARR_URL
       - RADARR_API_KEY=your_api_key
       - RADARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
-      - SONARR_API_URL=YOUR_SONARR_URL
-      - SONARR_API_KEY=your_sonarr_api_key
-      - SONARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
 
       # Optional variables with defaults
       - NODE_ENV=production
       - LOG_LEVEL=info
       - CHECK_INTERVAL_MINUTES=60
       - RADARR_MINIMUM_AVAILABILITY=released
+
+      # Optional Sonarr TV sync — set SONARR_ENABLED=true to activate.
+      # When enabled, SONARR_API_URL, SONARR_API_KEY, and SONARR_QUALITY_PROFILE are all required.
+      # - SONARR_ENABLED=true
+      # - SONARR_API_URL=YOUR_SONARR_URL
+      # - SONARR_API_KEY=your_sonarr_api_key
+      # - SONARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
+
+      # Optional diary cleanup — deletes Radarr/Sonarr items tagged in your Letterboxd diary.
+      # Sonarr cleanup additionally requires SONARR_ENABLED=true above.
+      # - RADARR_CLEANUP_ENABLED=true
+      # - SONARR_CLEANUP_ENABLED=true
+      # - LETTERBOXD_USERNAME=your_username
+      # - LETTERBOXD_CLEANUP_TAG=cleanup
 
       # Optional root folder ID (if not specified, uses first available)
       # - RADARR_ROOT_FOLDER_ID=1
@@ -40,11 +51,13 @@ services:
   #     - RADARR_API_URL=http://radarr:7878
   #     - RADARR_API_KEY=your_api_key
   #     - RADARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
-  #     - SONARR_API_URL=http://sonarr:8989
-  #     - SONARR_API_KEY=your_sonarr_api_key
-  #     - SONARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
   #     - RADARR_TAGS=watchlist,personal
   #     - CHECK_INTERVAL_MINUTES=60
+  #     # Sonarr (optional)
+  #     # - SONARR_ENABLED=true
+  #     # - SONARR_API_URL=http://sonarr:8989
+  #     # - SONARR_API_KEY=your_sonarr_api_key
+  #     # - SONARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
   #   volumes:
   #     - ./data/watchlist:/data
   #   restart: unless-stopped
@@ -57,11 +70,13 @@ services:
   #     - RADARR_API_URL=http://radarr:7878
   #     - RADARR_API_KEY=your_api_key
   #     - RADARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
-  #     - SONARR_API_URL=http://sonarr:8989
-  #     - SONARR_API_KEY=your_sonarr_api_key
-  #     - SONARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
   #     - RADARR_TAGS=criterion,classics
   #     - CHECK_INTERVAL_MINUTES=120
+  #     # Sonarr (optional)
+  #     # - SONARR_ENABLED=true
+  #     # - SONARR_API_URL=http://sonarr:8989
+  #     # - SONARR_API_KEY=your_sonarr_api_key
+  #     # - SONARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
   #   volumes:
   #     - ./data/criterion:/data
   #   restart: unless-stopped
@@ -74,9 +89,6 @@ services:
   #     - RADARR_API_URL=http://radarr:7878
   #     - RADARR_API_KEY=your_api_key
   #     - RADARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
-  #     - SONARR_API_URL=http://sonarr:8989
-  #     - SONARR_API_KEY=your_sonarr_api_key
-  #     - SONARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
   #     - RADARR_TAGS=nolan,director-filmography
   #     - CHECK_INTERVAL_MINUTES=1440  # Check once per day
   #   volumes:
