@@ -73,17 +73,18 @@ docker run -d --env-file .env -v lettarrboxd-data:/data lettarrboxd
 
 ### Diary cleanup (optional)
 
-Set `LETTERBOXD_CLEANUP_ENABLED=true` to enable deletion of Radarr movies based on a tag in your Letterboxd diary. When you tag a diary entry with the cleanup tag, the movie is deleted from Radarr (including files).
+Set `LETTERBOXD_CLEANUP_ENABLED=true` to enable deletion of Radarr movies based on a tag in your Letterboxd diary. Set `SONARR_CLEANUP_ENABLED=true` to do the same for Sonarr TV shows. When you tag a diary entry with the cleanup tag, the corresponding item is deleted from Radarr/Sonarr (including files).
 
 > **Note:** Letterboxd's tag index pages are Cloudflare-protected. This feature works around that by checking your diary RSS feed and individual diary entry pages instead — both are publicly accessible.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `LETTERBOXD_CLEANUP_ENABLED` | `false` | Set to `true` to enable |
-| `LETTERBOXD_USERNAME` | — | Your Letterboxd username (required) |
+| `LETTERBOXD_CLEANUP_ENABLED` | `false` | Set to `true` to enable Radarr diary cleanup |
+| `SONARR_CLEANUP_ENABLED` | `false` | Set to `true` to enable Sonarr diary cleanup |
+| `LETTERBOXD_USERNAME` | — | Your Letterboxd username (required when either cleanup is enabled) |
 | `LETTERBOXD_CLEANUP_TAG` | `cleanup` | Tag to watch for in diary entries |
 
-Processed entries are tracked in `/data/deleted.json` so they're only handled once.
+Processed entries are tracked in `/data/deleted.json` (Radarr) and `/data/deleted-sonarr.json` (Sonarr) so they're only handled once.
 
 ## Health check
 

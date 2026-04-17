@@ -286,5 +286,20 @@ describe('sonarr API', () => {
       ).resolves.toBeUndefined();
       expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('root folder'));
     });
+
+    it('increments noTvdb and warns when TVDB ID cannot be resolved', async () => {
+      mockAxiosInstance.get
+        .mockResolvedValueOnce({ data: [{ id: 1, name: 'HD-1080p' }] })
+        .mockResolvedValueOnce({ data: [{ id: 1, path: '/tv' }] })
+        .mockResolvedValueOnce({ data: [] });
+
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+
+      await upsertShows([{ id: 1, name: 'Unresolvable Show', slug: '/film/show/', tvTmdbId: '999' }]);
+
+      expect(mockAxiosInstance.post).not.toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('No TVDB ID'));
+      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('no TVDB ID: 1'));
+    });
   });
 });

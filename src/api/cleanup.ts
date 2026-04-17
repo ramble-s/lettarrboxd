@@ -43,7 +43,7 @@ async function fetchText(url: string): Promise<string> {
 
 interface RssEntry {
     slug: string;
-    tmdbId: number;
+    tmdbId?: number;
 }
 
 async function scrapeRssEntries(): Promise<RssEntry[]> {
@@ -54,10 +54,11 @@ async function scrapeRssEntries(): Promise<RssEntry[]> {
     while ((m = itemRe.exec(xml)) !== null) {
         const item = m[1];
         const linkM = item.match(/<link>([^<]+)<\/link>/);
-        const tmdbM = item.match(/<tmdb:movieId>(\d+)<\/tmdb:movieId>/);
-        if (!linkM || !tmdbM) continue;
+        if (!linkM) continue;
         const slugM = linkM[1].match(/\/film\/([^/]+)\//);
-        if (slugM) entries.push({ slug: slugM[1], tmdbId: parseInt(tmdbM[1]) });
+        if (!slugM) continue;
+        const tmdbM = item.match(/<tmdb:movieId>(\d+)<\/tmdb:movieId>/);
+        entries.push({ slug: slugM[1], tmdbId: tmdbM ? parseInt(tmdbM[1]) : undefined });
     }
     return entries;
 }
@@ -85,6 +86,11 @@ export async function runCleanup(): Promise<void> {
     let removed = 0, notFound = 0, errors = 0;
 
     for (const { slug, tmdbId } of toCheck) {
+        if (tmdbId === undefined) {
+            logger.debug(`[cleanup] No TMDB ID for ${slug}, skipping`);
+            continue;
+        }
+
         let tagged: boolean;
         try {
             tagged = await diaryPageHasTag(slug);

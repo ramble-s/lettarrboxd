@@ -22,8 +22,8 @@ let _axios: ReturnType<typeof Axios.create> | null = null;
 function getAxios(): ReturnType<typeof Axios.create> {
     if (!_axios) {
         _axios = Axios.create({
-            baseURL: env.SONARR_API_URL!,
-            headers: { 'X-Api-Key': env.SONARR_API_KEY! }
+            baseURL: env.SONARR_API_URL,
+            headers: { 'X-Api-Key': env.SONARR_API_KEY }
         });
     }
     return _axios;
@@ -73,7 +73,7 @@ export async function getExistingTvdbIds(): Promise<Set<number>> {
 
 export async function resolveTvdbId(tmdbTvId: string): Promise<number | null> {
     try {
-        const isBearer = env.TMDB_API_KEY!.startsWith('eyJ');
+        const isBearer = env.TMDB_API_KEY.startsWith('eyJ');
         const url = `https://api.themoviedb.org/3/tv/${tmdbTvId}/external_ids`;
         const headers: Record<string, string> = { Accept: 'application/json' };
 
@@ -159,7 +159,7 @@ export async function upsertShows(movies: LetterboxdMovie[]): Promise<void> {
 
     logger.info(`[sonarr] Processing ${tvShows.length} TV show(s)`);
 
-    const qualityProfileId = await getQualityProfileId(env.SONARR_QUALITY_PROFILE!);
+    const qualityProfileId = await getQualityProfileId(env.SONARR_QUALITY_PROFILE);
     if (!qualityProfileId) { logger.error('Could not get Sonarr quality profile ID'); return; }
 
     const rootFolderPath = await getRootFolder();
@@ -167,13 +167,13 @@ export async function upsertShows(movies: LetterboxdMovie[]): Promise<void> {
 
     const existing = await getExistingTvdbIds();
 
-    let added = 0, skipped = 0, errors = 0;
+    let added = 0, skipped = 0, noTvdb = 0;
 
     for (const show of tvShows) {
         const tvdbId = await resolveTvdbId(show.tvTmdbId!);
         if (!tvdbId) {
             logger.warn(`[sonarr] No TVDB ID for TMDB TV ${show.tvTmdbId} (${show.name})`);
-            errors++;
+            noTvdb++;
             continue;
         }
 
@@ -189,5 +189,5 @@ export async function upsertShows(movies: LetterboxdMovie[]): Promise<void> {
         added++;
     }
 
-    logger.info(`[sonarr] Done — added: ${added}, already present: ${skipped}, errors: ${errors}`);
+    logger.info(`[sonarr] Done — added: ${added}, already present: ${skipped}, no TVDB ID: ${noTvdb}`);
 }

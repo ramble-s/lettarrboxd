@@ -118,6 +118,13 @@ describe('cleanup', () => {
     expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('not in Radarr'));
   });
 
+  it('skips entry without tmdbId', async () => {
+    const xml = `<rss><item><link>https://letterboxd.com/testuser/film/no-tmdb/</link></item></rss>`;
+    mockFetch.mockResolvedValueOnce({ ok: true, text: async () => xml });
+    await runCleanup();
+    expect(getMovieByTmdbId).not.toHaveBeenCalled();
+  });
+
   it('increments errors on diary page fetch failure', async () => {
     mockFetch
       .mockResolvedValueOnce({ ok: true, text: async () => makeRssXml([{ slug: 'bad-film', tmdbId: 7 }]) })
