@@ -89,6 +89,10 @@ Set `LETTERBOXD_CLEANUP_ENABLED=true` to enable deletion of Radarr movies based 
 
 Processed entries are tracked in `/data/deleted.json` so they're only handled once.
 
+## Health check
+
+The container writes a `.last-run` timestamp to `/data` after each successful run. The Docker health check reads this file and fails if the last run was more than 2 hours ago, catching a stuck or crashed container. The `/data` volume mount is required for this to work.
+
 ## Supported Letterboxd URLs
 
 | Type | Example URL |

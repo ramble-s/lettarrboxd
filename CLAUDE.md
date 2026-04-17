@@ -47,9 +47,11 @@ The application follows a scheduled monitoring pattern:
 
 ### Module Separation
 - **`src/index.ts`** - Main orchestration, scheduling, and file I/O operations
-- **`src/letterboxd.ts`** - Web scraping and TMDB ID extraction logic
-- **`src/radarr.ts`** - Radarr API integration and movie management
-- **`src/env.ts`** - Environment validation and configuration management
+- **`src/scraper/`** - Web scraping and TMDB ID extraction logic
+- **`src/api/radarr.ts`** - Radarr API integration and movie management
+- **`src/api/sonarr.ts`** - Sonarr TV sync (fork addition)
+- **`src/api/cleanup.ts`** - Letterboxd diary cleanup (fork addition)
+- **`src/util/env.ts`** - Environment validation and configuration management
 
 ### Key Architectural Patterns
 
