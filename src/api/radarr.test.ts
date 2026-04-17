@@ -2,6 +2,7 @@
 const mockAxiosInstance = {
   get: jest.fn(),
   post: jest.fn(),
+  delete: jest.fn(),
 };
 
 jest.mock('axios', () => {
@@ -41,6 +42,8 @@ import {
   getAllRequiredTagIds,
   addMovie,
   upsertMovies,
+  getMovieByTmdbId,
+  deleteMovie,
 } from './radarr';
 
 describe('radarr API', () => {
@@ -272,6 +275,12 @@ describe('radarr API', () => {
       expect(mockAxiosInstance.post).not.toHaveBeenCalled();
     });
 
+    it('should skip silently when no tmdbId but tvTmdbId is set (TV show)', async () => {
+      const tvShow = { ...mockMovie, tmdbId: null, tvTmdbId: '456' };
+      await addMovie(tvShow, 2, '/movies', [1], 'released');
+      expect(mockAxiosInstance.post).not.toHaveBeenCalled();
+    });
+
     it('should handle dry run mode', async () => {
       // For this test, we can't easily change the env at runtime since it's already loaded
       // Instead, we'll verify the logic by checking the env mock
@@ -374,6 +383,42 @@ describe('radarr API', () => {
         });
 
       await expect(upsertMovies(mockMovies)).rejects.toThrow('Could not get root folder');
+    });
+  });
+
+  describe('getMovieByTmdbId', () => {
+    it('should return movie when found', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: [{ id: 10, title: 'The Matrix' }],
+      });
+      const result = await getMovieByTmdbId(603);
+      expect(result).toEqual({ id: 10, title: 'The Matrix' });
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v3/movie?tmdbId=603');
+    });
+
+    it('should return null when not found', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: [] });
+      expect(await getMovieByTmdbId(999)).toBeNull();
+    });
+
+    it('should return null on error', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Network error'));
+      expect(await getMovieByTmdbId(603)).toBeNull();
+    });
+  });
+
+  describe('deleteMovie', () => {
+    it('should delete movie successfully', async () => {
+      mockAxiosInstance.delete.mockResolvedValueOnce({});
+      await deleteMovie(10, 'The Matrix');
+      expect(mockAxiosInstance.delete).toHaveBeenCalledWith(
+        '/api/v3/movie/10?deleteFiles=true&addImportExclusion=false'
+      );
+    });
+
+    it('should log error on failure', async () => {
+      mockAxiosInstance.delete.mockRejectedValueOnce(new Error('Network error'));
+      await expect(deleteMovie(10, 'The Matrix')).resolves.toBeUndefined();
     });
   });
 });

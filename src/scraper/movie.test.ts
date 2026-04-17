@@ -44,6 +44,7 @@ describe('movie scraper', () => {
         name: 'The Matrix',
         imdbId: 'tt0133093',
         tmdbId: '603',
+        tvTmdbId: null,
         publishedYear: 1999,
         slug: '/film/the-matrix/',
       });

@@ -1,11 +1,15 @@
 import { main, startScheduledMonitoring } from './index';
 import * as scraperModule from './scraper';
 import * as radarrModule from './api/radarr';
+import * as sonarrModule from './api/sonarr';
+import * as cleanupModule from './api/cleanup';
 
 // Mock dependencies
 jest.mock('./util/env', () => ({
   CHECK_INTERVAL_MINUTES: 10,
   LETTERBOXD_URL: 'https://letterboxd.com/user/watchlist',
+  SONARR_ENABLED: false,
+  LETTERBOXD_CLEANUP_ENABLED: false,
 }));
 jest.mock('./util/logger', () => ({
   debug: jest.fn(),
@@ -15,6 +19,9 @@ jest.mock('./util/logger', () => ({
 }));
 jest.mock('./scraper');
 jest.mock('./api/radarr');
+jest.mock('./api/sonarr');
+jest.mock('./api/cleanup');
+jest.mock('fs', () => ({ writeFileSync: jest.fn() }));
 
 describe('main application', () => {
   let setIntervalSpy: jest.SpyInstance;
@@ -150,6 +157,35 @@ describe('main application', () => {
       expect(setIntervalSpy).toHaveBeenCalled();
       expect(scraperModule.fetchMoviesFromUrl).toHaveBeenCalled();
       expect(radarrModule.upsertMovies).toHaveBeenCalled();
+    });
+  });
+
+  describe('run with optional features enabled', () => {
+    beforeEach(() => {
+      const env = require('./util/env');
+      env.SONARR_ENABLED = true;
+      env.LETTERBOXD_CLEANUP_ENABLED = true;
+    });
+
+    afterEach(() => {
+      const env = require('./util/env');
+      env.SONARR_ENABLED = false;
+      env.LETTERBOXD_CLEANUP_ENABLED = false;
+    });
+
+    it('should call upsertShows and runCleanup when enabled', async () => {
+      const mockMovies = [{ id: 1, name: 'Show', slug: '/film/show/', tmdbId: null, tvTmdbId: '99' }];
+      (scraperModule.fetchMoviesFromUrl as jest.Mock).mockResolvedValue(mockMovies);
+      (radarrModule.upsertMovies as jest.Mock).mockResolvedValue(undefined);
+      (sonarrModule.upsertShows as jest.Mock).mockResolvedValue(undefined);
+      (cleanupModule.runCleanup as jest.Mock).mockResolvedValue(undefined);
+
+      startScheduledMonitoring();
+      // run() has 4 awaits deep (fetch → upsert → upsertShows → runCleanup)
+      for (let i = 0; i < 6; i++) await Promise.resolve();
+
+      expect(sonarrModule.upsertShows).toHaveBeenCalledWith(mockMovies);
+      expect(cleanupModule.runCleanup).toHaveBeenCalled();
     });
   });
 });
