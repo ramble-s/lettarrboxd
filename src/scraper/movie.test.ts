@@ -197,6 +197,7 @@ describe('movie scraper', () => {
       const result = await getMovie('/film/tv-show/');
 
       expect(result.tmdbId).toBeNull();
+      expect(result.tvTmdbId).toBe('12345');
     });
 
     it('should handle malformed IMDB link', async () => {

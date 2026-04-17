@@ -1,8 +1,3 @@
-import { detectListType, fetchMoviesFromUrl, ListType } from './index';
-import { ListScraper } from './list';
-import { CollectionsScraper } from './collections';
-import { PopularScraper } from './popular';
-
 // Mock the logger
 jest.mock('../util/logger', () => ({
   debug: jest.fn(),
@@ -11,25 +6,27 @@ jest.mock('../util/logger', () => ({
   error: jest.fn(),
 }));
 
-// Mock the env module
-jest.mock('../util/env', () => ({
+const mockEnv = {
   LETTERBOXD_URL: 'https://letterboxd.com/user/watchlist',
-  LETTERBOXD_TAKE_AMOUNT: undefined,
-  LETTERBOXD_TAKE_STRATEGY: undefined,
-}));
+  LETTERBOXD_TAKE_AMOUNT: undefined as number | undefined,
+  LETTERBOXD_TAKE_STRATEGY: undefined as 'oldest' | 'newest' | undefined,
+};
+jest.mock('../util/env', () => mockEnv);
 
-// Mock the ListScraper
 jest.mock('./list');
-
-// Mock the CollectionsScraper
 jest.mock('./collections');
-
-// Mock the PopularScraper
 jest.mock('./popular');
+
+import { detectListType, fetchMoviesFromUrl, ListType } from './index';
+import { ListScraper } from './list';
+import { CollectionsScraper } from './collections';
+import { PopularScraper } from './popular';
 
 describe('scraper index', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockEnv.LETTERBOXD_TAKE_AMOUNT = undefined;
+    mockEnv.LETTERBOXD_TAKE_STRATEGY = undefined;
   });
 
   describe('detectListType', () => {
@@ -147,10 +144,19 @@ describe('scraper index', () => {
     });
 
     it('should pass take parameters to ListScraper when configured', async () => {
-      // This test requires changing env at runtime which is difficult with the current setup
-      // Skip this test as it would need integration-level testing
-      // The actual functionality is tested in other tests
-      expect(true).toBe(true);
+      mockEnv.LETTERBOXD_TAKE_AMOUNT = 3;
+      mockEnv.LETTERBOXD_TAKE_STRATEGY = 'newest';
+
+      const mockGetMovies = jest.fn().mockResolvedValue([]);
+      (ListScraper as jest.Mock).mockImplementation(() => ({ getMovies: mockGetMovies }));
+
+      await fetchMoviesFromUrl('https://letterboxd.com/user/watchlist');
+
+      expect(ListScraper).toHaveBeenCalledWith(
+        'https://letterboxd.com/user/watchlist',
+        3,
+        'newest'
+      );
     });
 
     it('should throw error for unsupported URL format', async () => {
