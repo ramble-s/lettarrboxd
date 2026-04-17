@@ -1,6 +1,6 @@
 {
   "name": "lettarrboxd",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "main": "dist/index.js",
   "repository": "git@github.com:ramble-s/lettarrboxd.git",
   "author": "Ryan Page <ryanapage@gmail.com>",
