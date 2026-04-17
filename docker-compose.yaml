@@ -8,7 +8,10 @@ services:
       - LETTERBOXD_URL=https://letterboxd.com/your_username/watchlist/
       - RADARR_API_URL=http://radarr:7878
       - RADARR_API_KEY=your_api_key
-      - RADARR_QUALITY_PROFILE=HD-1080p
+      - RADARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
+      - SONARR_API_URL=http://sonarr:8989
+      - SONARR_API_KEY=your_sonarr_api_key
+      - SONARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
 
       # Optional variables with defaults
       - NODE_ENV=production
@@ -22,6 +25,8 @@ services:
       # Optional movie limiting (both required if using)
       # - LETTERBOXD_TAKE_AMOUNT=10
       # - LETTERBOXD_TAKE_STRATEGY=newest
+    volumes:
+      - lettarrboxd-data:/data
     restart: unless-stopped
 
   # Multi-list example - deploy one instance per list
@@ -34,7 +39,10 @@ services:
   #     - LETTERBOXD_URL=https://letterboxd.com/your_username/watchlist/
   #     - RADARR_API_URL=http://radarr:7878
   #     - RADARR_API_KEY=your_api_key
-  #     - RADARR_QUALITY_PROFILE=HD-1080p
+  #     - RADARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
+  #     - SONARR_API_URL=http://sonarr:8989
+  #     - SONARR_API_KEY=your_sonarr_api_key
+  #     - SONARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
   #     - RADARR_TAGS=watchlist,personal
   #     - CHECK_INTERVAL_MINUTES=60
   #   volumes:
@@ -48,7 +56,10 @@ services:
   #     - LETTERBOXD_URL=https://letterboxd.com/criterion/list/the-criterion-collection/
   #     - RADARR_API_URL=http://radarr:7878
   #     - RADARR_API_KEY=your_api_key
-  #     - RADARR_QUALITY_PROFILE=HD-1080p
+  #     - RADARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
+  #     - SONARR_API_URL=http://sonarr:8989
+  #     - SONARR_API_KEY=your_sonarr_api_key
+  #     - SONARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
   #     - RADARR_TAGS=criterion,classics
   #     - CHECK_INTERVAL_MINUTES=120
   #   volumes:
@@ -62,9 +73,15 @@ services:
   #     - LETTERBOXD_URL=https://letterboxd.com/director/christopher-nolan/
   #     - RADARR_API_URL=http://radarr:7878
   #     - RADARR_API_KEY=your_api_key
-  #     - RADARR_QUALITY_PROFILE=Ultra HD
+  #     - RADARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
+  #     - SONARR_API_URL=http://sonarr:8989
+  #     - SONARR_API_KEY=your_sonarr_api_key
+  #     - SONARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
   #     - RADARR_TAGS=nolan,director-filmography
   #     - CHECK_INTERVAL_MINUTES=1440  # Check once per day
   #   volumes:
   #     - ./data/nolan:/data
   #   restart: unless-stopped
+
+volumes:
+  lettarrboxd-data:
