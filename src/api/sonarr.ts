@@ -130,6 +130,29 @@ export async function addSeries(tvdbId: number, qualityProfileId: number, rootFo
     }
 }
 
+export async function getSeriesByTvdbId(tvdbId: number): Promise<{ id: number; title: string } | null> {
+    try {
+        const response = await getAxios().get(`/api/v3/series?tvdbId=${tvdbId}`);
+        return response.data?.[0] ?? null;
+    } catch (error) {
+        logger.error(`Error looking up Sonarr series tvdb:${tvdbId}:`, error);
+        return null;
+    }
+}
+
+export async function deleteSeries(sonarrId: number, title: string): Promise<void> {
+    try {
+        if (env.DRY_RUN) {
+            logger.info(`[DRY RUN] Would delete from Sonarr: "${title}" (id:${sonarrId})`);
+            return;
+        }
+        await getAxios().delete(`/api/v3/series/${sonarrId}?deleteFiles=true&addImportExclusion=false`);
+        logger.info(`Deleted from Sonarr: "${title}"`);
+    } catch (error) {
+        logger.error(`Error deleting Sonarr series id:${sonarrId}:`, error);
+    }
+}
+
 export async function upsertShows(movies: LetterboxdMovie[]): Promise<void> {
     const tvShows = movies.filter(m => m.tvTmdbId);
     if (tvShows.length === 0) return;

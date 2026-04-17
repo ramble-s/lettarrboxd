@@ -6,7 +6,7 @@ import logger from './util/logger';
 import { fetchMoviesFromUrl } from './scraper';
 import { upsertMovies } from './api/radarr';
 import { upsertShows } from './api/sonarr';
-import { runCleanup } from './api/cleanup';
+import { runCleanup, runSonarrCleanup } from './api/cleanup';
 
 const DATA_DIR = process.env.DATA_DIR ?? '/data';
 
@@ -16,6 +16,7 @@ function startScheduledMonitoring(): void {
   logger.info(`Starting scheduled monitoring. Will check every ${env.CHECK_INTERVAL_MINUTES} minutes.`);
   if (env.SONARR_ENABLED) logger.info('Sonarr TV sync enabled.');
   if (env.LETTERBOXD_CLEANUP_ENABLED) logger.info('Letterboxd cleanup enabled.');
+  if (env.SONARR_CLEANUP_ENABLED) logger.info('Sonarr cleanup enabled.');
 
   run().catch(logger.error);
 
@@ -33,6 +34,7 @@ async function run() {
   await upsertMovies(movies);
   if (env.SONARR_ENABLED) await upsertShows(movies);
   if (env.LETTERBOXD_CLEANUP_ENABLED) await runCleanup();
+  if (env.SONARR_CLEANUP_ENABLED) await runSonarrCleanup();
   fs.writeFileSync(`${DATA_DIR}/.last-run`, new Date().toISOString());
 }
 

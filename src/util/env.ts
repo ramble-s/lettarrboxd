@@ -23,6 +23,7 @@ const envSchema = z.object({
   LETTERBOXD_CLEANUP_ENABLED: z.string().default('false').transform(val => val.toLowerCase() === 'true'),
   LETTERBOXD_USERNAME: z.string().optional(),
   LETTERBOXD_CLEANUP_TAG: z.string().default('cleanup'),
+  SONARR_CLEANUP_ENABLED: z.string().default('false').transform(val => val.toLowerCase() === 'true'),
 }).refine(data => {
   const hasTakeAmount = data.LETTERBOXD_TAKE_AMOUNT !== undefined;
   const hasTakeStrategy = data.LETTERBOXD_TAKE_STRATEGY !== undefined;
@@ -45,6 +46,12 @@ const envSchema = z.object({
 }, {
   message: "LETTERBOXD_USERNAME is required when LETTERBOXD_CLEANUP_ENABLED=true",
   path: ["LETTERBOXD_CLEANUP_ENABLED"]
+}).refine(data => {
+  if (!data.SONARR_CLEANUP_ENABLED) return true;
+  return !!(data.SONARR_API_URL && data.SONARR_API_KEY && data.TMDB_API_KEY && data.LETTERBOXD_USERNAME);
+}, {
+  message: "SONARR_API_URL, SONARR_API_KEY, TMDB_API_KEY, and LETTERBOXD_USERNAME are required when SONARR_CLEANUP_ENABLED=true",
+  path: ["SONARR_CLEANUP_ENABLED"]
 });
 
 export type Env = z.infer<typeof envSchema>;
