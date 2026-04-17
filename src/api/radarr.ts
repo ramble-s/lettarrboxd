@@ -186,7 +186,7 @@ export async function addMovie(movie: LetterboxdMovie, qualityProfileId: number,
         logger.debug(`Adding movie to Radarr: ${movie.name}`);
 
         if (!movie.tmdbId) {
-            logger.info(`Could not add movie ${movie.name} because no tmdb id was found. Is this a TV show?`);
+            if (!movie.tvTmdbId) logger.info(`Could not add ${movie.name} — no TMDB ID found`);
             return;
         }
 

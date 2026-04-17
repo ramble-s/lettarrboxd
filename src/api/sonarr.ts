@@ -121,7 +121,6 @@ export async function addSeries(tvdbId: number, qualityProfileId: number, rootFo
         }
 
         await getAxios().post('/api/v3/series', series);
-        logger.info(`Successfully added series: ${series.title} (tvdb:${tvdbId})`);
     } catch (e: any) {
         if (e.response?.status === 400 && JSON.stringify(e.response?.data).includes('already been added')) {
             logger.debug(`Series tvdb:${tvdbId} already exists in Sonarr, skipping`);
@@ -156,10 +155,12 @@ if (tvShows.length === 0) return;
         }
 
         if (existing.has(tvdbId)) {
+            logger.debug(`${show.name} already in Sonarr, skipping`);
             skipped++;
             continue;
         }
 
+        logger.info(`Adding TV show to Sonarr: ${show.name} (tvdb:${tvdbId})`);
         await addSeries(tvdbId, qualityProfileId, rootFolderPath);
         existing.add(tvdbId);
         added++;
