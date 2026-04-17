@@ -18,7 +18,6 @@ const envSchema = z.object({
   SONARR_API_URL: z.string(),
   SONARR_API_KEY: z.string(),
   SONARR_QUALITY_PROFILE: z.string(),
-  TMDB_API_KEY: z.string(),
   LETTERBOXD_CLEANUP_ENABLED: z.string().default('false').transform(val => val.toLowerCase() === 'true'),
   LETTERBOXD_USERNAME: z.string().optional(),
   LETTERBOXD_CLEANUP_TAG: z.string().default('cleanup'),

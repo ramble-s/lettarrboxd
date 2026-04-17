@@ -61,53 +61,45 @@ export async function getRootFolder(): Promise<string | null> {
     }
 }
 
-export async function getExistingTvdbIds(): Promise<Set<number>> {
+/**
+ * Look up a series in Sonarr's library by its TMDB TV ID.
+ * Uses Sonarr's native `tmdb:` lookup term — no external TMDB API call needed.
+ * Returns the Sonarr series record (with internal id) if it is already in the library,
+ * or null if it is not yet added.
+ */
+export async function findSeriesInSonarrByTmdbId(tmdbTvId: string): Promise<{ id: number; title: string } | null> {
     try {
-        const response = await getAxios().get('/api/v3/series');
-        return new Set(response.data.map((s: any) => s.tvdbId));
+        const response = await getAxios().get(`/api/v3/series/lookup?term=tmdb:${tmdbTvId}`);
+        const results = response.data;
+        if (!results?.length) return null;
+        const first = results[0];
+        // Series already in library have a positive `id` at the series level.
+        // Series not yet added have no series-level `id` in the response.
+        if (!first.id) return null;
+        return { id: first.id, title: first.title };
     } catch (error) {
-        logger.error('Error getting existing Sonarr series:', error);
-        return new Set();
-    }
-}
-
-export async function resolveTvdbId(tmdbTvId: string): Promise<number | null> {
-    try {
-        const isBearer = env.TMDB_API_KEY.startsWith('eyJ');
-        const url = `https://api.themoviedb.org/3/tv/${tmdbTvId}/external_ids`;
-        const headers: Record<string, string> = { Accept: 'application/json' };
-
-        let fetchUrl = url;
-        if (isBearer) {
-            headers['Authorization'] = `Bearer ${env.TMDB_API_KEY}`;
-        } else {
-            fetchUrl = `${url}?api_key=${env.TMDB_API_KEY}`;
-        }
-
-        const response = await fetch(fetchUrl, { headers });
-        if (!response.ok) {
-            if (response.status === 404) return null;
-            throw new Error(`TMDB API returned ${response.status}`);
-        }
-        const data = await response.json() as { tvdb_id?: number };
-        return data.tvdb_id ?? null;
-    } catch (error) {
-        logger.error(`Error resolving TVDB ID for TMDB TV ${tmdbTvId}:`, error);
+        logger.error(`Error looking up Sonarr series tmdb:${tmdbTvId}:`, error);
         return null;
     }
 }
 
-export async function addSeries(tvdbId: number, qualityProfileId: number, rootFolderPath: string): Promise<void> {
+export async function addSeries(tmdbTvId: string, qualityProfileId: number, rootFolderPath: string): Promise<void> {
     try {
-        const lookupResponse = await getAxios().get(`/api/v3/series/lookup?term=tvdb:${tvdbId}`);
+        const lookupResponse = await getAxios().get(`/api/v3/series/lookup?term=tmdb:${tmdbTvId}`);
         const results = lookupResponse.data;
         if (!results || results.length === 0) {
-            logger.warn(`Series not found in Sonarr lookup for tvdb:${tvdbId}`);
+            logger.warn(`Series not found in Sonarr lookup for tmdb:${tmdbTvId}`);
+            return;
+        }
+
+        const first = results[0];
+        if (first.id) {
+            logger.debug(`Series tmdb:${tmdbTvId} already in Sonarr (id:${first.id}), skipping`);
             return;
         }
 
         const series: SonarrSeries = {
-            ...results[0],
+            ...first,
             qualityProfileId,
             rootFolderPath,
             monitored: true,
@@ -116,27 +108,18 @@ export async function addSeries(tvdbId: number, qualityProfileId: number, rootFo
         };
 
         if (env.DRY_RUN) {
-            logger.info(`[DRY RUN] Would add series to Sonarr: ${series.title} (tvdb:${tvdbId})`);
+            logger.info(`[DRY RUN] Would add series to Sonarr: ${series.title} (tmdb:${tmdbTvId})`);
             return;
         }
 
         await getAxios().post('/api/v3/series', series);
+        logger.info(`Added series to Sonarr: ${series.title} (tmdb:${tmdbTvId})`);
     } catch (e: any) {
         if (e.response?.status === 400 && JSON.stringify(e.response?.data).includes('already been added')) {
-            logger.debug(`Series tvdb:${tvdbId} already exists in Sonarr, skipping`);
+            logger.debug(`Series tmdb:${tmdbTvId} already exists in Sonarr, skipping`);
             return;
         }
-        logger.error(`Error adding series tvdb:${tvdbId}:`, e);
-    }
-}
-
-export async function getSeriesByTvdbId(tvdbId: number): Promise<{ id: number; title: string } | null> {
-    try {
-        const response = await getAxios().get(`/api/v3/series?tvdbId=${tvdbId}`);
-        return response.data?.[0] ?? null;
-    } catch (error) {
-        logger.error(`Error looking up Sonarr series tvdb:${tvdbId}:`, error);
-        return null;
+        logger.error(`Error adding series tmdb:${tmdbTvId}:`, e);
     }
 }
 
@@ -165,29 +148,27 @@ export async function upsertShows(movies: LetterboxdMovie[]): Promise<void> {
     const rootFolderPath = await getRootFolder();
     if (!rootFolderPath) { logger.error('Could not get Sonarr root folder'); return; }
 
-    const existing = await getExistingTvdbIds();
-
-    let added = 0, skipped = 0, noTvdb = 0;
+    let added = 0, skipped = 0, notFound = 0;
 
     for (const show of tvShows) {
-        const tvdbId = await resolveTvdbId(show.tvTmdbId!);
-        if (!tvdbId) {
-            logger.warn(`[sonarr] No TVDB ID for TMDB TV ${show.tvTmdbId} (${show.name})`);
-            noTvdb++;
+        const lookupResponse = await getAxios().get(`/api/v3/series/lookup?term=tmdb:${show.tvTmdbId}`).catch(() => null);
+        if (!lookupResponse?.data?.length) {
+            logger.warn(`[sonarr] Series not found in Sonarr lookup for ${show.name} (tmdb:${show.tvTmdbId})`);
+            notFound++;
             continue;
         }
 
-        if (existing.has(tvdbId)) {
+        const first = lookupResponse.data[0];
+        if (first.id) {
             logger.debug(`${show.name} already in Sonarr, skipping`);
             skipped++;
             continue;
         }
 
-        logger.info(`Adding TV show to Sonarr: ${show.name} (tvdb:${tvdbId})`);
-        await addSeries(tvdbId, qualityProfileId, rootFolderPath);
-        existing.add(tvdbId);
+        logger.info(`Adding TV show to Sonarr: ${show.name} (tmdb:${show.tvTmdbId})`);
+        await addSeries(show.tvTmdbId!, qualityProfileId, rootFolderPath);
         added++;
     }
 
-    logger.info(`[sonarr] Done — added: ${added}, already present: ${skipped}, no TVDB ID: ${noTvdb}`);
+    logger.info(`[sonarr] Done — added: ${added}, already present: ${skipped}, not found: ${notFound}`);
 }

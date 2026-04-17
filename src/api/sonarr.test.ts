@@ -19,23 +19,17 @@ const mockEnv = {
   SONARR_API_URL: 'http://localhost:8989',
   SONARR_API_KEY: 'test-sonarr-key',
   SONARR_QUALITY_PROFILE: 'HD-1080p',
-  TMDB_API_KEY: 'test-tmdb-key',
   DRY_RUN: false,
 };
 
 jest.mock('../util/env', () => mockEnv);
 
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
-
 import {
   getQualityProfileId,
   getRootFolder,
-  getExistingTvdbIds,
-  resolveTvdbId,
+  findSeriesInSonarrByTmdbId,
   addSeries,
   upsertShows,
-  getSeriesByTvdbId,
   deleteSeries,
 } from './sonarr';
 import logger from '../util/logger';
@@ -43,6 +37,7 @@ import logger from '../util/logger';
 describe('sonarr API', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockEnv.DRY_RUN = false;
   });
 
   describe('getQualityProfileId', () => {
@@ -83,82 +78,44 @@ describe('sonarr API', () => {
     });
   });
 
-  describe('getExistingTvdbIds', () => {
-    it('returns a Set of tvdbIds', async () => {
+  describe('findSeriesInSonarrByTmdbId', () => {
+    it('returns id+title when series is in Sonarr library (has id)', async () => {
       mockAxiosInstance.get.mockResolvedValueOnce({
-        data: [{ tvdbId: 100 }, { tvdbId: 200 }],
+        data: [{ id: 10, title: 'Cowboy Bebop', tvdbId: 76885 }],
       });
-      const result = await getExistingTvdbIds();
-      expect(result).toBeInstanceOf(Set);
-      expect(result.has(100)).toBe(true);
-      expect(result.has(200)).toBe(true);
+      const result = await findSeriesInSonarrByTmdbId('30991');
+      expect(result).toEqual({ id: 10, title: 'Cowboy Bebop' });
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v3/series/lookup?term=tmdb:30991');
     });
 
-    it('returns empty Set on error', async () => {
+    it('returns null when series is not in library (no id in response)', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: [{ title: 'Breaking Bad', tvdbId: 81189 }], // no `id` field
+      });
+      expect(await findSeriesInSonarrByTmdbId('1396')).toBeNull();
+    });
+
+    it('returns null when lookup returns no results', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: [] });
+      expect(await findSeriesInSonarrByTmdbId('99999')).toBeNull();
+    });
+
+    it('returns null on error', async () => {
       mockAxiosInstance.get.mockRejectedValueOnce(new Error('Network error'));
-      const result = await getExistingTvdbIds();
-      expect(result.size).toBe(0);
-    });
-  });
-
-  describe('resolveTvdbId', () => {
-    it('uses Bearer auth for JWT tokens', async () => {
-      mockEnv.TMDB_API_KEY = 'eyJtest.token.here';
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ tvdb_id: 12345 }),
-      });
-      const result = await resolveTvdbId('999');
-      expect(result).toBe(12345);
-      const [url, opts] = mockFetch.mock.calls[0];
-      expect(url).toBe('https://api.themoviedb.org/3/tv/999/external_ids');
-      expect(opts.headers['Authorization']).toMatch(/^Bearer eyJ/);
-      expect(url).not.toContain('api_key');
-    });
-
-    it('uses query param for v3 keys', async () => {
-      mockEnv.TMDB_API_KEY = 'abc123v3key';
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ tvdb_id: 99 }),
-      });
-      const result = await resolveTvdbId('42');
-      expect(result).toBe(99);
-      const [url] = mockFetch.mock.calls[0];
-      expect(url).toContain('api_key=abc123v3key');
-    });
-
-    it('returns null on 404', async () => {
-      mockEnv.TMDB_API_KEY = 'abc123';
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
-      expect(await resolveTvdbId('1')).toBeNull();
-    });
-
-    it('returns null when tvdb_id missing', async () => {
-      mockEnv.TMDB_API_KEY = 'abc123';
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({}),
-      });
-      expect(await resolveTvdbId('1')).toBeNull();
-    });
-
-    it('returns null on fetch error', async () => {
-      mockEnv.TMDB_API_KEY = 'abc123';
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
-      expect(await resolveTvdbId('1')).toBeNull();
+      expect(await findSeriesInSonarrByTmdbId('1396')).toBeNull();
     });
   });
 
   describe('addSeries', () => {
-    it('adds a series successfully', async () => {
+    it('adds a series when not in library', async () => {
       mockAxiosInstance.get.mockResolvedValueOnce({
-        data: [{ title: 'Test Show', tvdbId: 300 }],
+        data: [{ title: 'Test Show', tvdbId: 300 }], // no `id` → not in library
       });
       mockAxiosInstance.post.mockResolvedValueOnce({ data: {} });
 
-      await addSeries(300, 2, '/tv');
+      await addSeries('999', 2, '/tv');
 
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v3/series/lookup?term=tmdb:999');
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
         '/api/v3/series',
         expect.objectContaining({
@@ -171,9 +128,18 @@ describe('sonarr API', () => {
       );
     });
 
+    it('skips silently when series already in library', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: [{ id: 10, title: 'Already Added', tvdbId: 300 }], // has `id`
+      });
+      await addSeries('999', 2, '/tv');
+      expect(mockAxiosInstance.post).not.toHaveBeenCalled();
+      expect(logger.debug).toHaveBeenCalledWith(expect.stringContaining('already in Sonarr'));
+    });
+
     it('skips silently when lookup returns no results', async () => {
       mockAxiosInstance.get.mockResolvedValueOnce({ data: [] });
-      await addSeries(300, 2, '/tv');
+      await addSeries('999', 2, '/tv');
       expect(mockAxiosInstance.post).not.toHaveBeenCalled();
     });
 
@@ -184,7 +150,7 @@ describe('sonarr API', () => {
       mockAxiosInstance.post.mockRejectedValueOnce({
         response: { status: 400, data: 'This series has already been added' },
       });
-      await expect(addSeries(300, 2, '/tv')).resolves.toBeUndefined();
+      await expect(addSeries('999', 2, '/tv')).resolves.toBeUndefined();
     });
 
     it('respects DRY_RUN', async () => {
@@ -192,31 +158,9 @@ describe('sonarr API', () => {
       mockAxiosInstance.get.mockResolvedValueOnce({
         data: [{ title: 'Test Show', tvdbId: 300 }],
       });
-      await addSeries(300, 2, '/tv');
+      await addSeries('999', 2, '/tv');
       expect(mockAxiosInstance.post).not.toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('[DRY RUN]'));
-      mockEnv.DRY_RUN = false;
-    });
-  });
-
-  describe('getSeriesByTvdbId', () => {
-    it('returns first result when found', async () => {
-      mockAxiosInstance.get.mockResolvedValueOnce({
-        data: [{ id: 5, title: 'Test Show' }],
-      });
-      const result = await getSeriesByTvdbId(300);
-      expect(result).toEqual({ id: 5, title: 'Test Show' });
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v3/series?tvdbId=300');
-    });
-
-    it('returns null when response is empty', async () => {
-      mockAxiosInstance.get.mockResolvedValueOnce({ data: [] });
-      expect(await getSeriesByTvdbId(300)).toBeNull();
-    });
-
-    it('returns null on error', async () => {
-      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Network error'));
-      expect(await getSeriesByTvdbId(300)).toBeNull();
     });
   });
 
@@ -236,7 +180,6 @@ describe('sonarr API', () => {
       await deleteSeries(7, 'Test Show');
       expect(mockAxiosInstance.delete).not.toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('[DRY RUN]'));
-      mockEnv.DRY_RUN = false;
     });
 
     it('handles errors gracefully', async () => {
@@ -252,16 +195,11 @@ describe('sonarr API', () => {
       expect(mockAxiosInstance.get).not.toHaveBeenCalled();
     });
 
-    it('skips shows already in Sonarr', async () => {
+    it('skips shows already in Sonarr (lookup returns id)', async () => {
       mockAxiosInstance.get
-        .mockResolvedValueOnce({ data: [{ id: 1, name: 'HD-1080p' }] })
-        .mockResolvedValueOnce({ data: [{ id: 1, path: '/tv' }] })
-        .mockResolvedValueOnce({ data: [{ tvdbId: 500 }] });
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ tvdb_id: 500 }),
-      });
+        .mockResolvedValueOnce({ data: [{ id: 1, name: 'HD-1080p' }] })   // qualityprofile
+        .mockResolvedValueOnce({ data: [{ id: 1, path: '/tv' }] })         // rootfolder
+        .mockResolvedValueOnce({ data: [{ id: 10, title: 'Show', tvdbId: 500 }] }); // lookup: in library
 
       await upsertShows([{ id: 1, name: 'Show', slug: '/film/show/', tvTmdbId: '999' }]);
 
@@ -269,7 +207,33 @@ describe('sonarr API', () => {
       expect(logger.debug).toHaveBeenCalledWith(expect.stringContaining('already in Sonarr'));
     });
 
-    it('logs and returns (does not throw) when quality profile missing', async () => {
+    it('adds shows not yet in Sonarr (lookup returns no id)', async () => {
+      mockAxiosInstance.get
+        .mockResolvedValueOnce({ data: [{ id: 1, name: 'HD-1080p' }] })
+        .mockResolvedValueOnce({ data: [{ id: 1, path: '/tv' }] })
+        .mockResolvedValueOnce({ data: [{ title: 'New Show', tvdbId: 500 }] }) // lookup: not in library
+        .mockResolvedValueOnce({ data: [{ title: 'New Show', tvdbId: 500 }] }); // addSeries lookup
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: {} });
+
+      await upsertShows([{ id: 1, name: 'New Show', slug: '/film/show/', tvTmdbId: '999' }]);
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v3/series', expect.any(Object));
+      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('added: 1'));
+    });
+
+    it('counts not-found when lookup returns empty', async () => {
+      mockAxiosInstance.get
+        .mockResolvedValueOnce({ data: [{ id: 1, name: 'HD-1080p' }] })
+        .mockResolvedValueOnce({ data: [{ id: 1, path: '/tv' }] })
+        .mockResolvedValueOnce({ data: [] }); // lookup: not found
+
+      await upsertShows([{ id: 1, name: 'Ghost Show', slug: '/film/ghost/', tvTmdbId: '999' }]);
+
+      expect(mockAxiosInstance.post).not.toHaveBeenCalled();
+      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('not found: 1'));
+    });
+
+    it('logs and returns when quality profile missing', async () => {
       mockAxiosInstance.get.mockResolvedValueOnce({ data: [] });
       await expect(
         upsertShows([{ id: 1, name: 'Show', slug: '/film/show/', tvTmdbId: '999' }])
@@ -277,7 +241,7 @@ describe('sonarr API', () => {
       expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('quality profile'));
     });
 
-    it('logs and returns (does not throw) when root folder missing', async () => {
+    it('logs and returns when root folder missing', async () => {
       mockAxiosInstance.get
         .mockResolvedValueOnce({ data: [{ id: 1, name: 'HD-1080p' }] })
         .mockResolvedValueOnce({ data: [] });
@@ -285,21 +249,6 @@ describe('sonarr API', () => {
         upsertShows([{ id: 1, name: 'Show', slug: '/film/show/', tvTmdbId: '999' }])
       ).resolves.toBeUndefined();
       expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('root folder'));
-    });
-
-    it('increments noTvdb and warns when TVDB ID cannot be resolved', async () => {
-      mockAxiosInstance.get
-        .mockResolvedValueOnce({ data: [{ id: 1, name: 'HD-1080p' }] })
-        .mockResolvedValueOnce({ data: [{ id: 1, path: '/tv' }] })
-        .mockResolvedValueOnce({ data: [] });
-
-      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
-
-      await upsertShows([{ id: 1, name: 'Unresolvable Show', slug: '/film/show/', tvTmdbId: '999' }]);
-
-      expect(mockAxiosInstance.post).not.toHaveBeenCalled();
-      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('No TVDB ID'));
-      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('no TVDB ID: 1'));
     });
   });
 });

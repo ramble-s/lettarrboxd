@@ -19,9 +19,8 @@ jest.mock('./radarr', () => ({
 }));
 
 jest.mock('./sonarr', () => ({
-  getSeriesByTvdbId: jest.fn(),
+  findSeriesInSonarrByTmdbId: jest.fn(),
   deleteSeries: jest.fn(),
-  resolveTvdbId: jest.fn(),
 }));
 
 jest.mock('../scraper/movie', () => ({
@@ -34,7 +33,7 @@ global.fetch = mockFetch;
 import fs from 'fs';
 import { runCleanup, runSonarrCleanup } from './cleanup';
 import { getMovieByTmdbId, deleteMovie } from './radarr';
-import { getSeriesByTvdbId, deleteSeries, resolveTvdbId } from './sonarr';
+import { findSeriesInSonarrByTmdbId, deleteSeries } from './sonarr';
 import { getMovie } from '../scraper/movie';
 import logger from '../util/logger';
 
@@ -164,7 +163,7 @@ describe('sonarr cleanup', () => {
   it('returns early when RSS has no entries', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, text: async () => '<rss></rss>' });
     await runSonarrCleanup();
-    expect(getSeriesByTvdbId).not.toHaveBeenCalled();
+    expect(findSeriesInSonarrByTmdbId).not.toHaveBeenCalled();
   });
 
   it('skips already-processed slugs', async () => {
@@ -174,7 +173,7 @@ describe('sonarr cleanup', () => {
       text: async () => makeRssXml([{ slug: 'already-seen', tmdbId: 1 }]),
     });
     await runSonarrCleanup();
-    expect(getSeriesByTvdbId).not.toHaveBeenCalled();
+    expect(findSeriesInSonarrByTmdbId).not.toHaveBeenCalled();
   });
 
   it('skips entries without the cleanup tag', async () => {
@@ -183,7 +182,7 @@ describe('sonarr cleanup', () => {
       .mockResolvedValueOnce({ ok: true, text: async () => '<html>no tag here</html>' });
     await runSonarrCleanup();
     expect(getMovie).not.toHaveBeenCalled();
-    expect(getSeriesByTvdbId).not.toHaveBeenCalled();
+    expect(findSeriesInSonarrByTmdbId).not.toHaveBeenCalled();
   });
 
   it('skips tagged entries that are movies (no tvTmdbId)', async () => {
@@ -192,7 +191,7 @@ describe('sonarr cleanup', () => {
       .mockResolvedValueOnce({ ok: true, text: async () => '<html><a href="/tag/cleanup/">cleanup</a></html>' });
     (getMovie as jest.Mock).mockResolvedValueOnce({ id: 1, name: 'A Movie', slug: '/film/a-movie/', tvTmdbId: null });
     await runSonarrCleanup();
-    expect(getSeriesByTvdbId).not.toHaveBeenCalled();
+    expect(findSeriesInSonarrByTmdbId).not.toHaveBeenCalled();
   });
 
   it('deletes tagged TV show and persists slug', async () => {
@@ -200,12 +199,12 @@ describe('sonarr cleanup', () => {
       .mockResolvedValueOnce({ ok: true, text: async () => makeRssXml([{ slug: 'the-show', tmdbId: 99 }]) })
       .mockResolvedValueOnce({ ok: true, text: async () => '<html><a href="/tag/cleanup/">cleanup</a></html>' });
     (getMovie as jest.Mock).mockResolvedValueOnce({ id: 1, name: 'The Show', slug: '/film/the-show/', tvTmdbId: '500' });
-    (resolveTvdbId as jest.Mock).mockResolvedValueOnce(12345);
-    (getSeriesByTvdbId as jest.Mock).mockResolvedValueOnce({ id: 7, title: 'The Show' });
+    (findSeriesInSonarrByTmdbId as jest.Mock).mockResolvedValueOnce({ id: 7, title: 'The Show' });
     (deleteSeries as jest.Mock).mockResolvedValueOnce(undefined);
 
     await runSonarrCleanup();
 
+    expect(findSeriesInSonarrByTmdbId).toHaveBeenCalledWith('500');
     expect(deleteSeries).toHaveBeenCalledWith(7, 'The Show');
     expect(mockFs.writeFileSync).toHaveBeenCalledWith(
       expect.stringContaining('deleted-sonarr.json'),
@@ -219,28 +218,13 @@ describe('sonarr cleanup', () => {
       .mockResolvedValueOnce({ ok: true, text: async () => makeRssXml([{ slug: 'missing-show', tmdbId: 99 }]) })
       .mockResolvedValueOnce({ ok: true, text: async () => '<html><a href="/tag/cleanup/">cleanup</a></html>' });
     (getMovie as jest.Mock).mockResolvedValueOnce({ id: 1, name: 'Missing Show', slug: '/film/missing-show/', tvTmdbId: '500' });
-    (resolveTvdbId as jest.Mock).mockResolvedValueOnce(12345);
-    (getSeriesByTvdbId as jest.Mock).mockResolvedValueOnce(null);
+    (findSeriesInSonarrByTmdbId as jest.Mock).mockResolvedValueOnce(null);
 
     await runSonarrCleanup();
 
     expect(deleteSeries).not.toHaveBeenCalled();
     expect(mockFs.writeFileSync).toHaveBeenCalled();
     expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('not in Sonarr'));
-  });
-
-  it('persists slug when TVDB ID cannot be resolved', async () => {
-    mockFetch
-      .mockResolvedValueOnce({ ok: true, text: async () => makeRssXml([{ slug: 'no-tvdb', tmdbId: 99 }]) })
-      .mockResolvedValueOnce({ ok: true, text: async () => '<html><a href="/tag/cleanup/">cleanup</a></html>' });
-    (getMovie as jest.Mock).mockResolvedValueOnce({ id: 1, name: 'No TVDB', slug: '/film/no-tvdb/', tvTmdbId: '500' });
-    (resolveTvdbId as jest.Mock).mockResolvedValueOnce(null);
-
-    await runSonarrCleanup();
-
-    expect(deleteSeries).not.toHaveBeenCalled();
-    expect(mockFs.writeFileSync).toHaveBeenCalled();
-    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('No TVDB ID'));
   });
 
   it('increments errors on diary page fetch failure', async () => {
@@ -262,7 +246,7 @@ describe('sonarr cleanup', () => {
 
     await runSonarrCleanup();
 
-    expect(getSeriesByTvdbId).not.toHaveBeenCalled();
+    expect(findSeriesInSonarrByTmdbId).not.toHaveBeenCalled();
     expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('errors: 1'));
   });
 
@@ -272,8 +256,7 @@ describe('sonarr cleanup', () => {
       .mockResolvedValueOnce({ ok: true, text: async () => makeRssXml([{ slug: 'dry-show', tmdbId: 5 }]) })
       .mockResolvedValueOnce({ ok: true, text: async () => '<html><a href="/tag/cleanup/">cleanup</a></html>' });
     (getMovie as jest.Mock).mockResolvedValueOnce({ id: 1, name: 'Dry Show', slug: '/film/dry-show/', tvTmdbId: '500' });
-    (resolveTvdbId as jest.Mock).mockResolvedValueOnce(99999);
-    (getSeriesByTvdbId as jest.Mock).mockResolvedValueOnce({ id: 3, title: 'Dry Show' });
+    (findSeriesInSonarrByTmdbId as jest.Mock).mockResolvedValueOnce({ id: 3, title: 'Dry Show' });
 
     await runSonarrCleanup();
 

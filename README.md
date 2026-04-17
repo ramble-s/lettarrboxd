@@ -25,7 +25,6 @@ services:
       - SONARR_API_URL=http://sonarr:8989
       - SONARR_API_KEY=your_sonarr_api_key
       - SONARR_QUALITY_PROFILE=HD-1080p
-      - TMDB_API_KEY=your_tmdb_api_key
     volumes:
       - lettarrboxd-data:/data
     restart: unless-stopped
@@ -56,7 +55,6 @@ docker run -d --env-file .env -v lettarrboxd-data:/data lettarrboxd
 | `SONARR_API_URL` | Sonarr base URL |
 | `SONARR_API_KEY` | Sonarr API key |
 | `SONARR_QUALITY_PROFILE` | Quality profile name in Sonarr (case-sensitive) |
-| `TMDB_API_KEY` | TMDB API key — v3 key or v4 JWT Bearer token both work |
 
 ### Optional
 

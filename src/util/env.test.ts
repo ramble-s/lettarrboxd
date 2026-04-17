@@ -25,7 +25,6 @@ describe('env', () => {
       SONARR_API_URL: 'http://localhost:8989',
       SONARR_API_KEY: 'test-sonarr-key',
       SONARR_QUALITY_PROFILE: 'HD-1080p',
-      TMDB_API_KEY: 'test-tmdb-key',
     };
 
     const env = require('./env').default;
@@ -42,7 +41,6 @@ describe('env', () => {
     expect(env.SONARR_API_URL).toBe('http://localhost:8989');
     expect(env.SONARR_API_KEY).toBe('test-sonarr-key');
     expect(env.SONARR_QUALITY_PROFILE).toBe('HD-1080p');
-    expect(env.TMDB_API_KEY).toBe('test-tmdb-key');
   });
 
   it('should apply default values for optional fields', () => {
@@ -55,7 +53,6 @@ describe('env', () => {
       SONARR_API_URL: 'http://localhost:8989',
       SONARR_API_KEY: 'test-sonarr-key',
       SONARR_QUALITY_PROFILE: 'HD-1080p',
-      TMDB_API_KEY: 'test-tmdb-key',
     };
 
     const env = require('./env').default;
@@ -79,7 +76,6 @@ describe('env', () => {
       SONARR_API_URL: 'http://localhost:8989',
       SONARR_API_KEY: 'test-sonarr-key',
       SONARR_QUALITY_PROFILE: 'HD-1080p',
-      TMDB_API_KEY: 'test-tmdb-key',
     };
 
     const env = require('./env').default;
@@ -99,7 +95,6 @@ describe('env', () => {
       SONARR_API_URL: 'http://localhost:8989',
       SONARR_API_KEY: 'test-sonarr-key',
       SONARR_QUALITY_PROFILE: 'HD-1080p',
-      TMDB_API_KEY: 'test-tmdb-key',
     };
 
     const env = require('./env').default;
@@ -119,7 +114,6 @@ describe('env', () => {
       SONARR_API_URL: 'http://localhost:8989',
       SONARR_API_KEY: 'test-sonarr-key',
       SONARR_QUALITY_PROFILE: 'HD-1080p',
-      TMDB_API_KEY: 'test-tmdb-key',
     };
 
     const env = require('./env').default;
@@ -138,7 +132,6 @@ describe('env', () => {
       SONARR_API_URL: 'http://localhost:8989',
       SONARR_API_KEY: 'test-sonarr-key',
       SONARR_QUALITY_PROFILE: 'HD-1080p',
-      TMDB_API_KEY: 'test-tmdb-key',
     };
 
     const env = require('./env').default;
@@ -156,7 +149,6 @@ describe('env', () => {
       SONARR_API_URL: 'http://localhost:8989',
       SONARR_API_KEY: 'test-sonarr-key',
       SONARR_QUALITY_PROFILE: 'HD-1080p',
-      TMDB_API_KEY: 'test-tmdb-key',
     };
 
     const env = require('./env').default;
@@ -179,7 +171,6 @@ describe('env', () => {
       SONARR_API_URL: 'http://localhost:8989',
       SONARR_API_KEY: 'test-sonarr-key',
       SONARR_QUALITY_PROFILE: 'HD-1080p',
-      TMDB_API_KEY: 'test-tmdb-key',
     };
 
     expect(() => {
@@ -208,7 +199,6 @@ describe('env', () => {
       SONARR_API_URL: 'http://localhost:8989',
       SONARR_API_KEY: 'test-sonarr-key',
       SONARR_QUALITY_PROFILE: 'HD-1080p',
-      TMDB_API_KEY: 'test-tmdb-key',
     };
 
     expect(() => {
@@ -235,7 +225,6 @@ describe('env', () => {
       SONARR_API_URL: 'http://localhost:8989',
       SONARR_API_KEY: 'test-sonarr-key',
       SONARR_QUALITY_PROFILE: 'HD-1080p',
-      TMDB_API_KEY: 'test-tmdb-key',
       // Missing LETTERBOXD_URL
     };
 
@@ -261,7 +250,7 @@ describe('env', () => {
       RADARR_API_URL: 'http://localhost:7878',
       RADARR_API_KEY: 'test-api-key',
       RADARR_QUALITY_PROFILE: 'HD-1080p',
-      // Missing SONARR_API_URL, SONARR_API_KEY, SONARR_QUALITY_PROFILE, TMDB_API_KEY
+      // Missing SONARR_API_URL, SONARR_API_KEY, SONARR_QUALITY_PROFILE
     };
 
     expect(() => {
@@ -273,4 +262,5 @@ describe('env', () => {
     mockExit.mockRestore();
     mockConsoleError.mockRestore();
   });
+
 });

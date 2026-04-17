@@ -3,7 +3,7 @@ import env from '../util/env';
 import logger from '../util/logger';
 import { getMovieByTmdbId, deleteMovie } from './radarr';
 import { getMovie } from '../scraper/movie';
-import { getSeriesByTvdbId, deleteSeries, resolveTvdbId } from './sonarr';
+import { findSeriesInSonarrByTmdbId, deleteSeries } from './sonarr';
 
 const DATA_DIR = process.env.DATA_DIR ?? '/data';
 const DELETED_FILE = `${DATA_DIR}/deleted.json`;
@@ -170,19 +170,13 @@ export async function runSonarrCleanup(): Promise<void> {
         }
 
         try {
-            const tvdbId = await resolveTvdbId(tvTmdbId);
-            if (!tvdbId) {
-                logger.warn(`[sonarr-cleanup] No TVDB ID for TMDB TV ${tvTmdbId} (${slug})`);
+            const series = await findSeriesInSonarrByTmdbId(tvTmdbId);
+            if (!series) {
+                logger.info(`[sonarr-cleanup] Tagged but not in Sonarr: ${slug} (tmdb:${tvTmdbId})`);
                 notFound++;
             } else {
-                const series = await getSeriesByTvdbId(tvdbId);
-                if (!series) {
-                    logger.info(`[sonarr-cleanup] Tagged but not in Sonarr: ${slug} (tvdb:${tvdbId})`);
-                    notFound++;
-                } else {
-                    await deleteSeries(series.id, series.title);
-                    if (!env.DRY_RUN) removed++;
-                }
+                await deleteSeries(series.id, series.title);
+                if (!env.DRY_RUN) removed++;
             }
             if (!env.DRY_RUN) {
                 deleted.add(slug);
