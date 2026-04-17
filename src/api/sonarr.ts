@@ -61,9 +61,23 @@ export async function getRootFolder(): Promise<string | null> {
     }
 }
 
+async function getSeriesByTmdbIdFallback(tmdbId: number): Promise<{ id: number; title: string } | null> {
+    try {
+        const response = await getAxios().get('/api/v3/series');
+        const match = (response.data as any[]).find((s: any) => s.tmdbId === tmdbId);
+        if (!match) return null;
+        return { id: match.id, title: match.title };
+    } catch (error) {
+        logger.error(`Error fetching Sonarr library for fallback tmdbId:${tmdbId}:`, error);
+        return null;
+    }
+}
+
 /**
  * Look up a series in Sonarr's library by its TMDB TV ID.
  * Uses Sonarr's native `tmdb:` lookup term — no external TMDB API call needed.
+ * Falls back to scanning the full library if the lookup returns empty (Sonarr bug
+ * where some series return no results from the lookup endpoint).
  * Returns the Sonarr series record (with internal id) if it is already in the library,
  * or null if it is not yet added.
  */
@@ -71,10 +85,18 @@ export async function findSeriesInSonarrByTmdbId(tmdbTvId: string): Promise<{ id
     try {
         const response = await getAxios().get(`/api/v3/series/lookup?term=tmdb:${tmdbTvId}`);
         const results = response.data;
-        if (!results?.length) return null;
-        const first = results[0];
+        if (!results?.length) {
+            const fallback = await getSeriesByTmdbIdFallback(Number(tmdbTvId));
+            if (fallback) {
+                logger.debug(`Series tmdb:${tmdbTvId} found via library fallback: ${fallback.title}`);
+                return fallback;
+            }
+            logger.warn(`Series tmdb:${tmdbTvId} not found after fallback check`);
+            return null;
+        }
         // Series already in library have a positive `id` at the series level.
         // Series not yet added have no series-level `id` in the response.
+        const first = results[0];
         if (!first.id) return null;
         return { id: first.id, title: first.title };
     } catch (error) {

@@ -95,9 +95,24 @@ describe('sonarr API', () => {
       expect(await findSeriesInSonarrByTmdbId('1396')).toBeNull();
     });
 
-    it('returns null when lookup returns no results', async () => {
-      mockAxiosInstance.get.mockResolvedValueOnce({ data: [] });
+    it('returns null when lookup returns no results and series not in library', async () => {
+      mockAxiosInstance.get
+        .mockResolvedValueOnce({ data: [] })           // lookup: empty
+        .mockResolvedValueOnce({ data: [] });           // library: empty
       expect(await findSeriesInSonarrByTmdbId('99999')).toBeNull();
+      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('not found after fallback check'));
+    });
+
+    it('returns id+title via library fallback when lookup is empty but series is in library', async () => {
+      mockAxiosInstance.get
+        .mockResolvedValueOnce({ data: [] })            // lookup: empty
+        .mockResolvedValueOnce({                        // library: match found
+          data: [{ id: 42, title: 'Wild Wild Country', tmdbId: 68507 }],
+        });
+      const result = await findSeriesInSonarrByTmdbId('68507');
+      expect(result).toEqual({ id: 42, title: 'Wild Wild Country' });
+      expect(mockAxiosInstance.get).toHaveBeenNthCalledWith(2, '/api/v3/series');
+      expect(logger.debug).toHaveBeenCalledWith(expect.stringContaining('found via library fallback'));
     });
 
     it('returns null on error', async () => {
