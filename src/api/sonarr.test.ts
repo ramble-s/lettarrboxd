@@ -1,6 +1,7 @@
 const mockAxiosInstance = {
   get: jest.fn(),
   post: jest.fn(),
+  delete: jest.fn(),
 };
 
 jest.mock('axios', () => ({
@@ -34,6 +35,8 @@ import {
   resolveTvdbId,
   addSeries,
   upsertShows,
+  getSeriesByTvdbId,
+  deleteSeries,
 } from './sonarr';
 import logger from '../util/logger';
 
@@ -193,6 +196,53 @@ describe('sonarr API', () => {
       expect(mockAxiosInstance.post).not.toHaveBeenCalled();
       expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('[DRY RUN]'));
       mockEnv.DRY_RUN = false;
+    });
+  });
+
+  describe('getSeriesByTvdbId', () => {
+    it('returns first result when found', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: [{ id: 5, title: 'Test Show' }],
+      });
+      const result = await getSeriesByTvdbId(300);
+      expect(result).toEqual({ id: 5, title: 'Test Show' });
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v3/series?tvdbId=300');
+    });
+
+    it('returns null when response is empty', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: [] });
+      expect(await getSeriesByTvdbId(300)).toBeNull();
+    });
+
+    it('returns null on error', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Network error'));
+      expect(await getSeriesByTvdbId(300)).toBeNull();
+    });
+  });
+
+  describe('deleteSeries', () => {
+    it('calls DELETE with deleteFiles=true', async () => {
+      mockAxiosInstance.delete = jest.fn().mockResolvedValueOnce({});
+      await deleteSeries(7, 'Test Show');
+      expect(mockAxiosInstance.delete).toHaveBeenCalledWith(
+        '/api/v3/series/7?deleteFiles=true&addImportExclusion=false'
+      );
+      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('Deleted from Sonarr'));
+    });
+
+    it('respects DRY_RUN', async () => {
+      mockEnv.DRY_RUN = true;
+      mockAxiosInstance.delete = jest.fn();
+      await deleteSeries(7, 'Test Show');
+      expect(mockAxiosInstance.delete).not.toHaveBeenCalled();
+      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('[DRY RUN]'));
+      mockEnv.DRY_RUN = false;
+    });
+
+    it('handles errors gracefully', async () => {
+      mockAxiosInstance.delete = jest.fn().mockRejectedValueOnce(new Error('Network error'));
+      await expect(deleteSeries(7, 'Test Show')).resolves.toBeUndefined();
+      expect(logger.error).toHaveBeenCalled();
     });
   });
 

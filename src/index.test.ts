@@ -165,27 +165,31 @@ describe('main application', () => {
       const env = require('./util/env');
       env.SONARR_ENABLED = true;
       env.LETTERBOXD_CLEANUP_ENABLED = true;
+      env.SONARR_CLEANUP_ENABLED = true;
     });
 
     afterEach(() => {
       const env = require('./util/env');
       env.SONARR_ENABLED = false;
       env.LETTERBOXD_CLEANUP_ENABLED = false;
+      env.SONARR_CLEANUP_ENABLED = false;
     });
 
-    it('should call upsertShows and runCleanup when enabled', async () => {
+    it('should call upsertShows, runCleanup, and runSonarrCleanup when enabled', async () => {
       const mockMovies = [{ id: 1, name: 'Show', slug: '/film/show/', tmdbId: null, tvTmdbId: '99' }];
       (scraperModule.fetchMoviesFromUrl as jest.Mock).mockResolvedValue(mockMovies);
       (radarrModule.upsertMovies as jest.Mock).mockResolvedValue(undefined);
       (sonarrModule.upsertShows as jest.Mock).mockResolvedValue(undefined);
       (cleanupModule.runCleanup as jest.Mock).mockResolvedValue(undefined);
+      (cleanupModule.runSonarrCleanup as jest.Mock).mockResolvedValue(undefined);
 
       startScheduledMonitoring();
-      // run() has 4 awaits deep (fetch → upsert → upsertShows → runCleanup)
-      for (let i = 0; i < 6; i++) await Promise.resolve();
+      // run() has 5 awaits deep (fetch → upsert → upsertShows → runCleanup → runSonarrCleanup)
+      for (let i = 0; i < 7; i++) await Promise.resolve();
 
       expect(sonarrModule.upsertShows).toHaveBeenCalledWith(mockMovies);
       expect(cleanupModule.runCleanup).toHaveBeenCalled();
+      expect(cleanupModule.runSonarrCleanup).toHaveBeenCalled();
     });
   });
 });
