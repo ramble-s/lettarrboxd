@@ -21,10 +21,10 @@ services:
       - LETTERBOXD_URL=https://letterboxd.com/your_username/watchlist/
       - RADARR_API_URL=http://radarr:7878
       - RADARR_API_KEY=your_radarr_api_key
-      - RADARR_QUALITY_PROFILE=HD-1080p
+      - RADARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
       - SONARR_API_URL=http://sonarr:8989
       - SONARR_API_KEY=your_sonarr_api_key
-      - SONARR_QUALITY_PROFILE=HD-1080p
+      - SONARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
     volumes:
       - lettarrboxd-data:/data
     restart: unless-stopped

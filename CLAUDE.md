@@ -23,7 +23,7 @@ New modules added in this fork: `src/api/sonarr.ts` (TV sync), `src/api/cleanup.
 
 ## Environment Configuration
 
-The application uses Zod for strict environment variable validation in `src/env.ts`. All environment variables are validated at startup and the application will exit with detailed error messages if validation fails.
+The application uses Zod for strict environment variable validation in `src/util/env.ts`. All environment variables are validated at startup and the application will exit with detailed error messages if validation fails.
 
 Required variables:
 - `LETTERBOXD_URL` - Letterboxd list URL for scraping (supports watchlists, regular lists, watched movies, filmographies, collections, etc.)
