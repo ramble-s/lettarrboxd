@@ -8,7 +8,8 @@ import * as cleanupModule from './api/cleanup';
 jest.mock('./util/env', () => ({
   CHECK_INTERVAL_MINUTES: 10,
   LETTERBOXD_URL: 'https://letterboxd.com/user/watchlist',
-  LETTERBOXD_CLEANUP_ENABLED: false,
+  SONARR_ENABLED: false,
+  RADARR_CLEANUP_ENABLED: false,
   SONARR_CLEANUP_ENABLED: false,
 }));
 jest.mock('./util/logger', () => ({
@@ -161,7 +162,7 @@ describe('main application', () => {
   });
 
   describe('run', () => {
-    it('should always call upsertShows', async () => {
+    it('should NOT call upsertShows when SONARR_ENABLED is false', async () => {
       const mockMovies = [{ id: 1, name: 'Show', slug: '/film/show/', tmdbId: null, tvTmdbId: '99' }];
       (scraperModule.fetchMoviesFromUrl as jest.Mock).mockResolvedValue(mockMovies);
       (radarrModule.upsertMovies as jest.Mock).mockResolvedValue(undefined);
@@ -170,20 +171,46 @@ describe('main application', () => {
       startScheduledMonitoring();
       for (let i = 0; i < 4; i++) await Promise.resolve();
 
-      expect(sonarrModule.upsertShows).toHaveBeenCalledWith(mockMovies);
+      expect(sonarrModule.upsertShows).not.toHaveBeenCalled();
+    });
+
+    describe('with SONARR_ENABLED', () => {
+      beforeEach(() => {
+        const env = require('./util/env');
+        env.SONARR_ENABLED = true;
+      });
+
+      afterEach(() => {
+        const env = require('./util/env');
+        env.SONARR_ENABLED = false;
+      });
+
+      it('calls upsertShows when SONARR_ENABLED is true', async () => {
+        const mockMovies = [{ id: 1, name: 'Show', slug: '/film/show/', tmdbId: null, tvTmdbId: '99' }];
+        (scraperModule.fetchMoviesFromUrl as jest.Mock).mockResolvedValue(mockMovies);
+        (radarrModule.upsertMovies as jest.Mock).mockResolvedValue(undefined);
+        (sonarrModule.upsertShows as jest.Mock).mockResolvedValue(undefined);
+
+        startScheduledMonitoring();
+        for (let i = 0; i < 4; i++) await Promise.resolve();
+
+        expect(sonarrModule.upsertShows).toHaveBeenCalledWith(mockMovies);
+      });
     });
   });
 
   describe('run with cleanup enabled', () => {
     beforeEach(() => {
       const env = require('./util/env');
-      env.LETTERBOXD_CLEANUP_ENABLED = true;
+      env.SONARR_ENABLED = true;
+      env.RADARR_CLEANUP_ENABLED = true;
       env.SONARR_CLEANUP_ENABLED = true;
     });
 
     afterEach(() => {
       const env = require('./util/env');
-      env.LETTERBOXD_CLEANUP_ENABLED = false;
+      env.SONARR_ENABLED = false;
+      env.RADARR_CLEANUP_ENABLED = false;
       env.SONARR_CLEANUP_ENABLED = false;
     });
 

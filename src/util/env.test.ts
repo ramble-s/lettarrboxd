@@ -222,9 +222,6 @@ describe('env', () => {
       RADARR_API_URL: 'http://localhost:7878',
       RADARR_API_KEY: 'test-api-key',
       RADARR_QUALITY_PROFILE: 'HD-1080p',
-      SONARR_API_URL: 'http://localhost:8989',
-      SONARR_API_KEY: 'test-sonarr-key',
-      SONARR_QUALITY_PROFILE: 'HD-1080p',
       // Missing LETTERBOXD_URL
     };
 
@@ -238,7 +235,42 @@ describe('env', () => {
     mockConsoleError.mockRestore();
   });
 
-  it('should fail validation when Sonarr required field is missing', () => {
+  it('SONARR_ENABLED defaults to false and Sonarr vars are optional when disabled', () => {
+    process.env = {
+      NODE_ENV: 'test',
+      LETTERBOXD_URL: 'https://letterboxd.com/user/watchlist',
+      RADARR_API_URL: 'http://localhost:7878',
+      RADARR_API_KEY: 'test-api-key',
+      RADARR_QUALITY_PROFILE: 'HD-1080p',
+      // No SONARR_* at all — should still parse
+    };
+
+    const env = require('./env').default;
+    expect(env.SONARR_ENABLED).toBe(false);
+    expect(env.SONARR_API_URL).toBeUndefined();
+    expect(env.SONARR_API_KEY).toBeUndefined();
+    expect(env.SONARR_QUALITY_PROFILE).toBeUndefined();
+  });
+
+  it('accepts SONARR_ENABLED=true with all Sonarr vars present', () => {
+    process.env = {
+      NODE_ENV: 'test',
+      LETTERBOXD_URL: 'https://letterboxd.com/user/watchlist',
+      RADARR_API_URL: 'http://localhost:7878',
+      RADARR_API_KEY: 'test-api-key',
+      RADARR_QUALITY_PROFILE: 'HD-1080p',
+      SONARR_ENABLED: 'true',
+      SONARR_API_URL: 'http://localhost:8989',
+      SONARR_API_KEY: 'test-sonarr-key',
+      SONARR_QUALITY_PROFILE: 'HD-1080p',
+    };
+
+    const env = require('./env').default;
+    expect(env.SONARR_ENABLED).toBe(true);
+    expect(env.SONARR_API_URL).toBe('http://localhost:8989');
+  });
+
+  it('should fail validation when SONARR_ENABLED=true but Sonarr vars missing', () => {
     const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit called');
     });
@@ -250,6 +282,7 @@ describe('env', () => {
       RADARR_API_URL: 'http://localhost:7878',
       RADARR_API_KEY: 'test-api-key',
       RADARR_QUALITY_PROFILE: 'HD-1080p',
+      SONARR_ENABLED: 'true',
       // Missing SONARR_API_URL, SONARR_API_KEY, SONARR_QUALITY_PROFILE
     };
 
@@ -261,6 +294,74 @@ describe('env', () => {
 
     mockExit.mockRestore();
     mockConsoleError.mockRestore();
+  });
+
+  it('should fail validation when SONARR_CLEANUP_ENABLED=true but SONARR_ENABLED is false', () => {
+    const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit called');
+    });
+    const mockConsoleError = jest.spyOn(console, 'error').mockImplementation();
+
+    process.env = {
+      NODE_ENV: 'test',
+      LETTERBOXD_URL: 'https://letterboxd.com/user/watchlist',
+      RADARR_API_URL: 'http://localhost:7878',
+      RADARR_API_KEY: 'test-api-key',
+      RADARR_QUALITY_PROFILE: 'HD-1080p',
+      LETTERBOXD_USERNAME: 'tester',
+      SONARR_CLEANUP_ENABLED: 'true',
+      // SONARR_ENABLED not set → defaults false
+    };
+
+    expect(() => {
+      jest.isolateModules(() => {
+        require('./env');
+      });
+    }).toThrow('process.exit called');
+
+    mockExit.mockRestore();
+    mockConsoleError.mockRestore();
+  });
+
+  it('should fail validation when RADARR_CLEANUP_ENABLED=true but LETTERBOXD_USERNAME missing', () => {
+    const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit called');
+    });
+    const mockConsoleError = jest.spyOn(console, 'error').mockImplementation();
+
+    process.env = {
+      NODE_ENV: 'test',
+      LETTERBOXD_URL: 'https://letterboxd.com/user/watchlist',
+      RADARR_API_URL: 'http://localhost:7878',
+      RADARR_API_KEY: 'test-api-key',
+      RADARR_QUALITY_PROFILE: 'HD-1080p',
+      RADARR_CLEANUP_ENABLED: 'true',
+    };
+
+    expect(() => {
+      jest.isolateModules(() => {
+        require('./env');
+      });
+    }).toThrow('process.exit called');
+
+    mockExit.mockRestore();
+    mockConsoleError.mockRestore();
+  });
+
+  it('parses RADARR_CLEANUP_ENABLED with LETTERBOXD_USERNAME set', () => {
+    process.env = {
+      NODE_ENV: 'test',
+      LETTERBOXD_URL: 'https://letterboxd.com/user/watchlist',
+      RADARR_API_URL: 'http://localhost:7878',
+      RADARR_API_KEY: 'test-api-key',
+      RADARR_QUALITY_PROFILE: 'HD-1080p',
+      RADARR_CLEANUP_ENABLED: 'true',
+      LETTERBOXD_USERNAME: 'tester',
+    };
+
+    const env = require('./env').default;
+    expect(env.RADARR_CLEANUP_ENABLED).toBe(true);
+    expect(env.LETTERBOXD_CLEANUP_TAG).toBe('cleanup'); // default
   });
 
 });

@@ -54,7 +54,7 @@ describe('cleanup', () => {
     jest.clearAllMocks();
     mockEnv.DRY_RUN = false;
     mockFs.readFileSync.mockImplementation((path) => {
-      if (String(path).endsWith('deleted.json')) return '[]';
+      if (String(path).endsWith('deleted-radarr.json')) return '[]';
       throw new Error('unexpected readFileSync');
     });
     mockFs.writeFileSync.mockImplementation(() => {});
@@ -98,7 +98,7 @@ describe('cleanup', () => {
 
     expect(deleteMovie).toHaveBeenCalledWith(10, 'The Film');
     expect(mockFs.writeFileSync).toHaveBeenCalledWith(
-      expect.stringContaining('deleted.json'),
+      expect.stringContaining('deleted-radarr.json'),
       expect.stringContaining('the-film')
     );
     expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('deleted: 1'));

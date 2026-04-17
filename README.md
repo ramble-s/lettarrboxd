@@ -12,16 +12,37 @@ All three run on the same interval from a single container.
 
 ## Quick start
 
+**Radarr only:**
 ```yaml
 services:
   lettarrboxd:
-    image: ghcr.io/ramble-s/lettarrboxd:latest   # or build from source (see below)
+    image: ghcr.io/ramble-s/lettarrboxd:latest
     container_name: lettarrboxd
     environment:
       - LETTERBOXD_URL=https://letterboxd.com/your_username/watchlist/
       - RADARR_API_URL=YOUR_RADARR_URL
       - RADARR_API_KEY=your_radarr_api_key
       - RADARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
+    volumes:
+      - lettarrboxd-data:/data
+    restart: unless-stopped
+
+volumes:
+  lettarrboxd-data:
+```
+
+**Radarr + Sonarr:**
+```yaml
+services:
+  lettarrboxd:
+    image: ghcr.io/ramble-s/lettarrboxd:latest
+    container_name: lettarrboxd
+    environment:
+      - LETTERBOXD_URL=https://letterboxd.com/your_username/watchlist/
+      - RADARR_API_URL=YOUR_RADARR_URL
+      - RADARR_API_KEY=your_radarr_api_key
+      - RADARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
+      - SONARR_ENABLED=true
       - SONARR_API_URL=YOUR_SONARR_URL
       - SONARR_API_KEY=your_sonarr_api_key
       - SONARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
@@ -52,9 +73,17 @@ docker run -d --env-file .env -v lettarrboxd-data:/data lettarrboxd
 | `RADARR_API_URL` | Radarr base URL |
 | `RADARR_API_KEY` | Radarr API key |
 | `RADARR_QUALITY_PROFILE` | Quality profile name (case-sensitive) |
-| `SONARR_API_URL` | Sonarr base URL |
-| `SONARR_API_KEY` | Sonarr API key |
-| `SONARR_QUALITY_PROFILE` | Quality profile name in Sonarr (case-sensitive) |
+
+### Sonarr (optional)
+
+Set `SONARR_ENABLED=true` to enable TV show sync. The three Sonarr vars below become required when enabled.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SONARR_ENABLED` | `false` | Enable Sonarr TV show sync |
+| `SONARR_API_URL` | — | Sonarr base URL |
+| `SONARR_API_KEY` | — | Sonarr API key |
+| `SONARR_QUALITY_PROFILE` | — | Quality profile name in Sonarr (case-sensitive) |
 
 ### Optional
 
@@ -72,18 +101,18 @@ docker run -d --env-file .env -v lettarrboxd-data:/data lettarrboxd
 
 ### Diary cleanup (optional)
 
-Set `LETTERBOXD_CLEANUP_ENABLED=true` to enable deletion of Radarr movies based on a tag in your Letterboxd diary. Set `SONARR_CLEANUP_ENABLED=true` to do the same for Sonarr TV shows. When you tag a diary entry with the cleanup tag, the corresponding item is deleted from Radarr/Sonarr (including files).
+Set `RADARR_CLEANUP_ENABLED=true` to enable deletion of Radarr movies based on a tag in your Letterboxd diary. Set `SONARR_CLEANUP_ENABLED=true` to do the same for Sonarr TV shows (requires `SONARR_ENABLED=true`). When you tag a diary entry with the cleanup tag, the corresponding item is deleted from Radarr/Sonarr (including files).
 
 > **Note:** Letterboxd's tag index pages are Cloudflare-protected. This feature works around that by checking your diary RSS feed and individual diary entry pages instead — both are publicly accessible.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `LETTERBOXD_CLEANUP_ENABLED` | `false` | Set to `true` to enable Radarr diary cleanup |
-| `SONARR_CLEANUP_ENABLED` | `false` | Set to `true` to enable Sonarr diary cleanup |
+| `RADARR_CLEANUP_ENABLED` | `false` | Enable Radarr diary cleanup |
+| `SONARR_CLEANUP_ENABLED` | `false` | Enable Sonarr diary cleanup (requires `SONARR_ENABLED=true`) |
 | `LETTERBOXD_USERNAME` | — | Your Letterboxd username (required when either cleanup is enabled) |
-| `LETTERBOXD_CLEANUP_TAG` | `cleanup` | Tag to watch for in diary entries |
+| `LETTERBOXD_CLEANUP_TAG` | `cleanup` | Letterboxd diary tag to watch for |
 
-Processed entries are tracked in `/data/deleted.json` (Radarr) and `/data/deleted-sonarr.json` (Sonarr) so they're only handled once.
+Processed entries are tracked in `/data/deleted-radarr.json` (Radarr) and `/data/deleted-sonarr.json` (Sonarr) so they're only handled once.
 
 ## Health check
 
