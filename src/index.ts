@@ -14,7 +14,7 @@ function startScheduledMonitoring(): void {
   const intervalMs = env.CHECK_INTERVAL_MINUTES * 60 * 1000;
 
   logger.info(`Starting scheduled monitoring. Will check every ${env.CHECK_INTERVAL_MINUTES} minutes.`);
-  if (env.SONARR_ENABLED) logger.info('Sonarr TV sync enabled.');
+  logger.info('Sonarr TV sync enabled.');
   if (env.LETTERBOXD_CLEANUP_ENABLED) logger.info('Letterboxd cleanup enabled.');
   if (env.SONARR_CLEANUP_ENABLED) logger.info('Sonarr cleanup enabled.');
 
@@ -32,7 +32,7 @@ function startScheduledMonitoring(): void {
 async function run() {
   const movies = await fetchMoviesFromUrl(env.LETTERBOXD_URL);
   await upsertMovies(movies);
-  if (env.SONARR_ENABLED) await upsertShows(movies);
+  await upsertShows(movies);
   if (env.LETTERBOXD_CLEANUP_ENABLED) await runCleanup();
   if (env.SONARR_CLEANUP_ENABLED) await runSonarrCleanup();
   fs.writeFileSync(`${DATA_DIR}/.last-run`, new Date().toISOString());

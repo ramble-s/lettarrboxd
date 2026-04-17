@@ -8,8 +8,8 @@ import * as cleanupModule from './api/cleanup';
 jest.mock('./util/env', () => ({
   CHECK_INTERVAL_MINUTES: 10,
   LETTERBOXD_URL: 'https://letterboxd.com/user/watchlist',
-  SONARR_ENABLED: false,
   LETTERBOXD_CLEANUP_ENABLED: false,
+  SONARR_CLEANUP_ENABLED: false,
 }));
 jest.mock('./util/logger', () => ({
   debug: jest.fn(),
@@ -160,22 +160,34 @@ describe('main application', () => {
     });
   });
 
-  describe('run with optional features enabled', () => {
+  describe('run', () => {
+    it('should always call upsertShows', async () => {
+      const mockMovies = [{ id: 1, name: 'Show', slug: '/film/show/', tmdbId: null, tvTmdbId: '99' }];
+      (scraperModule.fetchMoviesFromUrl as jest.Mock).mockResolvedValue(mockMovies);
+      (radarrModule.upsertMovies as jest.Mock).mockResolvedValue(undefined);
+      (sonarrModule.upsertShows as jest.Mock).mockResolvedValue(undefined);
+
+      startScheduledMonitoring();
+      for (let i = 0; i < 4; i++) await Promise.resolve();
+
+      expect(sonarrModule.upsertShows).toHaveBeenCalledWith(mockMovies);
+    });
+  });
+
+  describe('run with cleanup enabled', () => {
     beforeEach(() => {
       const env = require('./util/env');
-      env.SONARR_ENABLED = true;
       env.LETTERBOXD_CLEANUP_ENABLED = true;
       env.SONARR_CLEANUP_ENABLED = true;
     });
 
     afterEach(() => {
       const env = require('./util/env');
-      env.SONARR_ENABLED = false;
       env.LETTERBOXD_CLEANUP_ENABLED = false;
       env.SONARR_CLEANUP_ENABLED = false;
     });
 
-    it('should call upsertShows, runCleanup, and runSonarrCleanup when enabled', async () => {
+    it('should call runCleanup and runSonarrCleanup when enabled', async () => {
       const mockMovies = [{ id: 1, name: 'Show', slug: '/film/show/', tmdbId: null, tvTmdbId: '99' }];
       (scraperModule.fetchMoviesFromUrl as jest.Mock).mockResolvedValue(mockMovies);
       (radarrModule.upsertMovies as jest.Mock).mockResolvedValue(undefined);
@@ -184,7 +196,6 @@ describe('main application', () => {
       (cleanupModule.runSonarrCleanup as jest.Mock).mockResolvedValue(undefined);
 
       startScheduledMonitoring();
-      // run() has 5 awaits deep (fetch → upsert → upsertShows → runCleanup → runSonarrCleanup)
       for (let i = 0; i < 7; i++) await Promise.resolve();
 
       expect(sonarrModule.upsertShows).toHaveBeenCalledWith(mockMovies);

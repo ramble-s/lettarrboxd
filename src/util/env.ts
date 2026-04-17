@@ -15,11 +15,10 @@ const envSchema = z.object({
   LETTERBOXD_TAKE_AMOUNT: z.string().optional().transform(val => val ? Number(val) : undefined).pipe(z.number().positive().optional()),
   LETTERBOXD_TAKE_STRATEGY: z.enum(['oldest', 'newest']).optional(),
   DRY_RUN: z.string().default('false').transform(val => val.toLowerCase() === 'true'),
-  SONARR_ENABLED: z.string().default('false').transform(val => val.toLowerCase() === 'true'),
-  SONARR_API_URL: z.string().optional(),
-  SONARR_API_KEY: z.string().optional(),
-  SONARR_QUALITY_PROFILE: z.string().optional(),
-  TMDB_API_KEY: z.string().optional(),
+  SONARR_API_URL: z.string(),
+  SONARR_API_KEY: z.string(),
+  SONARR_QUALITY_PROFILE: z.string(),
+  TMDB_API_KEY: z.string(),
   LETTERBOXD_CLEANUP_ENABLED: z.string().default('false').transform(val => val.toLowerCase() === 'true'),
   LETTERBOXD_USERNAME: z.string().optional(),
   LETTERBOXD_CLEANUP_TAG: z.string().default('cleanup'),
@@ -35,12 +34,6 @@ const envSchema = z.object({
   message: "When using movie limiting, both LETTERBOXD_TAKE_AMOUNT and LETTERBOXD_TAKE_STRATEGY must be specified",
   path: ["LETTERBOXD_TAKE_AMOUNT", "LETTERBOXD_TAKE_STRATEGY"]
 }).refine(data => {
-  if (!data.SONARR_ENABLED) return true;
-  return !!(data.SONARR_API_URL && data.SONARR_API_KEY && data.SONARR_QUALITY_PROFILE && data.TMDB_API_KEY);
-}, {
-  message: "SONARR_API_URL, SONARR_API_KEY, SONARR_QUALITY_PROFILE, and TMDB_API_KEY are required when SONARR_ENABLED=true",
-  path: ["SONARR_ENABLED"]
-}).refine(data => {
   if (!data.LETTERBOXD_CLEANUP_ENABLED) return true;
   return !!data.LETTERBOXD_USERNAME;
 }, {
@@ -48,9 +41,9 @@ const envSchema = z.object({
   path: ["LETTERBOXD_CLEANUP_ENABLED"]
 }).refine(data => {
   if (!data.SONARR_CLEANUP_ENABLED) return true;
-  return !!(data.SONARR_API_URL && data.SONARR_API_KEY && data.TMDB_API_KEY && data.LETTERBOXD_USERNAME);
+  return !!data.LETTERBOXD_USERNAME;
 }, {
-  message: "SONARR_API_URL, SONARR_API_KEY, TMDB_API_KEY, and LETTERBOXD_USERNAME are required when SONARR_CLEANUP_ENABLED=true",
+  message: "LETTERBOXD_USERNAME is required when SONARR_CLEANUP_ENABLED=true",
   path: ["SONARR_CLEANUP_ENABLED"]
 });
 
