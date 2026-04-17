@@ -12,8 +12,7 @@ function startScheduledMonitoring(): void {
   const intervalMs = env.CHECK_INTERVAL_MINUTES * 60 * 1000;
 
   logger.info(`Starting scheduled monitoring. Will check every ${env.CHECK_INTERVAL_MINUTES} minutes.`);
-  logger.info(`[startup] SONARR_ENABLED=${env.SONARR_ENABLED} CLEANUP=${env.LETTERBOXD_CLEANUP_ENABLED}`);
-  if (env.SONARR_ENABLED) logger.info('Sonarr TV sync enabled.');
+if (env.SONARR_ENABLED) logger.info('Sonarr TV sync enabled.');
   if (env.LETTERBOXD_CLEANUP_ENABLED) logger.info('Letterboxd cleanup enabled.');
 
   run();
