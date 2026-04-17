@@ -133,6 +133,7 @@ export async function addSeries(tvdbId: number, qualityProfileId: number, rootFo
 
 export async function upsertShows(movies: LetterboxdMovie[]): Promise<void> {
     const tvShows = movies.filter(m => m.tvTmdbId);
+    logger.debug(`[sonarr] ${tvShows.length}/${movies.length} items have tvTmdbId`);
     if (tvShows.length === 0) return;
 
     logger.info(`[sonarr] Processing ${tvShows.length} TV show(s)`);
