@@ -5,7 +5,7 @@ A (vibecoded) fork of [ryanpage/lettarrboxd](https://github.com/ryanpag3/lettarr
 ## What it does
 
 - **Radarr sync** — scrapes a Letterboxd list and adds movies to Radarr automatically
-- **Sonarr sync** *(optional)* — detects TV shows in the same list and adds them to Sonarr
+- **Sonarr sync** — detects TV shows in the same list and adds them to Sonarr
 - **Diary cleanup** *(optional)* — watches your Letterboxd diary for entries tagged with a chosen tag (e.g. `cleanup`) and deletes the corresponding movie from Radarr
 
 All three run on the same interval from a single container.
@@ -22,6 +22,9 @@ services:
       - RADARR_API_URL=http://radarr:7878
       - RADARR_API_KEY=your_radarr_api_key
       - RADARR_QUALITY_PROFILE=HD-1080p
+      - SONARR_API_URL=http://sonarr:8989
+      - SONARR_API_KEY=your_sonarr_api_key
+      - SONARR_QUALITY_PROFILE=HD-1080p
     volumes:
       - lettarrboxd-data:/data
     restart: unless-stopped
@@ -41,7 +44,7 @@ docker run -d --env-file .env -v lettarrboxd-data:/data lettarrboxd
 
 ## Configuration
 
-### Radarr (required)
+### Required
 
 | Variable | Description |
 |----------|-------------|
@@ -49,8 +52,11 @@ docker run -d --env-file .env -v lettarrboxd-data:/data lettarrboxd
 | `RADARR_API_URL` | Radarr base URL |
 | `RADARR_API_KEY` | Radarr API key |
 | `RADARR_QUALITY_PROFILE` | Quality profile name (case-sensitive) |
+| `SONARR_API_URL` | Sonarr base URL |
+| `SONARR_API_KEY` | Sonarr API key |
+| `SONARR_QUALITY_PROFILE` | Quality profile name in Sonarr (case-sensitive) |
 
-### Radarr (optional)
+### Optional
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -63,31 +69,20 @@ docker run -d --env-file .env -v lettarrboxd-data:/data lettarrboxd
 | `LETTERBOXD_TAKE_STRATEGY` | — | `newest` or `oldest` (requires `LETTERBOXD_TAKE_AMOUNT`) |
 | `DRY_RUN` | `false` | Log what would happen without making any changes |
 
-### Sonarr TV sync (optional)
-
-Set `SONARR_ENABLED=true` to have TV shows in your Letterboxd list added to Sonarr instead of silently skipped. Requires a TMDB API key to resolve TMDB TV IDs to TVDB IDs.
-
-| Variable | Description |
-|----------|-------------|
-| `SONARR_ENABLED` | Set to `true` to enable |
-| `SONARR_API_URL` | Sonarr base URL |
-| `SONARR_API_KEY` | Sonarr API key |
-| `SONARR_QUALITY_PROFILE` | Quality profile name in Sonarr (case-sensitive) |
-| `TMDB_API_KEY` | TMDB API key — v3 key or v4 JWT Bearer token both work |
-
 ### Diary cleanup (optional)
 
-Set `LETTERBOXD_CLEANUP_ENABLED=true` to enable deletion of Radarr movies based on a tag in your Letterboxd diary. When you tag a diary entry with the cleanup tag, the movie is deleted from Radarr (including files).
+Set `LETTERBOXD_CLEANUP_ENABLED=true` to enable deletion of Radarr movies based on a tag in your Letterboxd diary. Set `SONARR_CLEANUP_ENABLED=true` to do the same for Sonarr TV shows. When you tag a diary entry with the cleanup tag, the corresponding item is deleted from Radarr/Sonarr (including files).
 
 > **Note:** Letterboxd's tag index pages are Cloudflare-protected. This feature works around that by checking your diary RSS feed and individual diary entry pages instead — both are publicly accessible.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `LETTERBOXD_CLEANUP_ENABLED` | `false` | Set to `true` to enable |
-| `LETTERBOXD_USERNAME` | — | Your Letterboxd username (required) |
+| `LETTERBOXD_CLEANUP_ENABLED` | `false` | Set to `true` to enable Radarr diary cleanup |
+| `SONARR_CLEANUP_ENABLED` | `false` | Set to `true` to enable Sonarr diary cleanup |
+| `LETTERBOXD_USERNAME` | — | Your Letterboxd username (required when either cleanup is enabled) |
 | `LETTERBOXD_CLEANUP_TAG` | `cleanup` | Tag to watch for in diary entries |
 
-Processed entries are tracked in `/data/deleted.json` so they're only handled once.
+Processed entries are tracked in `/data/deleted.json` (Radarr) and `/data/deleted-sonarr.json` (Sonarr) so they're only handled once.
 
 ## Health check
 

@@ -21,7 +21,10 @@ describe('env', () => {
       RADARR_MINIMUM_AVAILABILITY: 'released',
       CHECK_INTERVAL_MINUTES: '15',
       DRY_RUN: 'false',
-      RADARR_ADD_UNMONITORED: 'false'
+      RADARR_ADD_UNMONITORED: 'false',
+      SONARR_API_URL: 'http://localhost:8989',
+      SONARR_API_KEY: 'test-sonarr-key',
+      SONARR_QUALITY_PROFILE: 'HD-1080p',
     };
 
     const env = require('./env').default;
@@ -35,6 +38,9 @@ describe('env', () => {
     expect(env.CHECK_INTERVAL_MINUTES).toBe(15);
     expect(env.DRY_RUN).toBe(false);
     expect(env.RADARR_ADD_UNMONITORED).toBe(false);
+    expect(env.SONARR_API_URL).toBe('http://localhost:8989');
+    expect(env.SONARR_API_KEY).toBe('test-sonarr-key');
+    expect(env.SONARR_QUALITY_PROFILE).toBe('HD-1080p');
   });
 
   it('should apply default values for optional fields', () => {
@@ -44,6 +50,9 @@ describe('env', () => {
       RADARR_API_URL: 'http://localhost:7878',
       RADARR_API_KEY: 'test-api-key',
       RADARR_QUALITY_PROFILE: 'HD-1080p',
+      SONARR_API_URL: 'http://localhost:8989',
+      SONARR_API_KEY: 'test-sonarr-key',
+      SONARR_QUALITY_PROFILE: 'HD-1080p',
     };
 
     const env = require('./env').default;
@@ -64,6 +73,9 @@ describe('env', () => {
       RADARR_API_KEY: 'test-api-key',
       RADARR_QUALITY_PROFILE: 'HD-1080p',
       CHECK_INTERVAL_MINUTES: '30',
+      SONARR_API_URL: 'http://localhost:8989',
+      SONARR_API_KEY: 'test-sonarr-key',
+      SONARR_QUALITY_PROFILE: 'HD-1080p',
     };
 
     const env = require('./env').default;
@@ -80,6 +92,9 @@ describe('env', () => {
       RADARR_QUALITY_PROFILE: 'HD-1080p',
       DRY_RUN: 'true',
       RADARR_ADD_UNMONITORED: 'TRUE',
+      SONARR_API_URL: 'http://localhost:8989',
+      SONARR_API_KEY: 'test-sonarr-key',
+      SONARR_QUALITY_PROFILE: 'HD-1080p',
     };
 
     const env = require('./env').default;
@@ -96,6 +111,9 @@ describe('env', () => {
       RADARR_QUALITY_PROFILE: 'HD-1080p',
       LETTERBOXD_TAKE_AMOUNT: '5',
       LETTERBOXD_TAKE_STRATEGY: 'newest',
+      SONARR_API_URL: 'http://localhost:8989',
+      SONARR_API_KEY: 'test-sonarr-key',
+      SONARR_QUALITY_PROFILE: 'HD-1080p',
     };
 
     const env = require('./env').default;
@@ -111,6 +129,9 @@ describe('env', () => {
       RADARR_API_KEY: 'test-api-key',
       RADARR_QUALITY_PROFILE: 'HD-1080p',
       RADARR_ROOT_FOLDER_ID: '1',
+      SONARR_API_URL: 'http://localhost:8989',
+      SONARR_API_KEY: 'test-sonarr-key',
+      SONARR_QUALITY_PROFILE: 'HD-1080p',
     };
 
     const env = require('./env').default;
@@ -125,6 +146,9 @@ describe('env', () => {
       RADARR_API_KEY: 'test-api-key',
       RADARR_QUALITY_PROFILE: 'HD-1080p',
       RADARR_TAGS: 'tag1,tag2',
+      SONARR_API_URL: 'http://localhost:8989',
+      SONARR_API_KEY: 'test-sonarr-key',
+      SONARR_QUALITY_PROFILE: 'HD-1080p',
     };
 
     const env = require('./env').default;
@@ -144,6 +168,9 @@ describe('env', () => {
       RADARR_API_KEY: 'test-api-key',
       RADARR_QUALITY_PROFILE: 'HD-1080p',
       LETTERBOXD_TAKE_AMOUNT: '5',
+      SONARR_API_URL: 'http://localhost:8989',
+      SONARR_API_KEY: 'test-sonarr-key',
+      SONARR_QUALITY_PROFILE: 'HD-1080p',
     };
 
     expect(() => {
@@ -169,6 +196,9 @@ describe('env', () => {
       RADARR_API_KEY: 'test-api-key',
       RADARR_QUALITY_PROFILE: 'HD-1080p',
       LETTERBOXD_TAKE_STRATEGY: 'newest',
+      SONARR_API_URL: 'http://localhost:8989',
+      SONARR_API_KEY: 'test-sonarr-key',
+      SONARR_QUALITY_PROFILE: 'HD-1080p',
     };
 
     expect(() => {
@@ -192,6 +222,9 @@ describe('env', () => {
       RADARR_API_URL: 'http://localhost:7878',
       RADARR_API_KEY: 'test-api-key',
       RADARR_QUALITY_PROFILE: 'HD-1080p',
+      SONARR_API_URL: 'http://localhost:8989',
+      SONARR_API_KEY: 'test-sonarr-key',
+      SONARR_QUALITY_PROFILE: 'HD-1080p',
       // Missing LETTERBOXD_URL
     };
 
@@ -204,4 +237,30 @@ describe('env', () => {
     mockExit.mockRestore();
     mockConsoleError.mockRestore();
   });
+
+  it('should fail validation when Sonarr required field is missing', () => {
+    const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit called');
+    });
+    const mockConsoleError = jest.spyOn(console, 'error').mockImplementation();
+
+    process.env = {
+      NODE_ENV: 'test',
+      LETTERBOXD_URL: 'https://letterboxd.com/user/watchlist',
+      RADARR_API_URL: 'http://localhost:7878',
+      RADARR_API_KEY: 'test-api-key',
+      RADARR_QUALITY_PROFILE: 'HD-1080p',
+      // Missing SONARR_API_URL, SONARR_API_KEY, SONARR_QUALITY_PROFILE
+    };
+
+    expect(() => {
+      jest.isolateModules(() => {
+        require('./env');
+      });
+    }).toThrow('process.exit called');
+
+    mockExit.mockRestore();
+    mockConsoleError.mockRestore();
+  });
+
 });

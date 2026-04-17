@@ -3,7 +3,7 @@ import env from '../util/env';
 import logger from '../util/logger';
 import { getMovieByTmdbId, deleteMovie } from './radarr';
 import { getMovie } from '../scraper/movie';
-import { getSeriesByTvdbId, deleteSeries, resolveTvdbId } from './sonarr';
+import { findSeriesInSonarrByTmdbId, deleteSeries } from './sonarr';
 
 const DATA_DIR = process.env.DATA_DIR ?? '/data';
 const DELETED_FILE = `${DATA_DIR}/deleted.json`;
@@ -43,7 +43,7 @@ async function fetchText(url: string): Promise<string> {
 
 interface RssEntry {
     slug: string;
-    tmdbId: number;
+    tmdbId?: number;
 }
 
 async function scrapeRssEntries(): Promise<RssEntry[]> {
@@ -54,10 +54,11 @@ async function scrapeRssEntries(): Promise<RssEntry[]> {
     while ((m = itemRe.exec(xml)) !== null) {
         const item = m[1];
         const linkM = item.match(/<link>([^<]+)<\/link>/);
-        const tmdbM = item.match(/<tmdb:movieId>(\d+)<\/tmdb:movieId>/);
-        if (!linkM || !tmdbM) continue;
+        if (!linkM) continue;
         const slugM = linkM[1].match(/\/film\/([^/]+)\//);
-        if (slugM) entries.push({ slug: slugM[1], tmdbId: parseInt(tmdbM[1]) });
+        if (!slugM) continue;
+        const tmdbM = item.match(/<tmdb:movieId>(\d+)<\/tmdb:movieId>/);
+        entries.push({ slug: slugM[1], tmdbId: tmdbM ? parseInt(tmdbM[1]) : undefined });
     }
     return entries;
 }
@@ -85,6 +86,11 @@ export async function runCleanup(): Promise<void> {
     let removed = 0, notFound = 0, errors = 0;
 
     for (const { slug, tmdbId } of toCheck) {
+        if (tmdbId === undefined) {
+            logger.debug(`[cleanup] No TMDB ID for ${slug}, skipping`);
+            continue;
+        }
+
         let tagged: boolean;
         try {
             tagged = await diaryPageHasTag(slug);
@@ -164,19 +170,13 @@ export async function runSonarrCleanup(): Promise<void> {
         }
 
         try {
-            const tvdbId = await resolveTvdbId(tvTmdbId);
-            if (!tvdbId) {
-                logger.warn(`[sonarr-cleanup] No TVDB ID for TMDB TV ${tvTmdbId} (${slug})`);
+            const series = await findSeriesInSonarrByTmdbId(tvTmdbId);
+            if (!series) {
+                logger.info(`[sonarr-cleanup] Tagged but not in Sonarr: ${slug} (tmdb:${tvTmdbId})`);
                 notFound++;
             } else {
-                const series = await getSeriesByTvdbId(tvdbId);
-                if (!series) {
-                    logger.info(`[sonarr-cleanup] Tagged but not in Sonarr: ${slug} (tvdb:${tvdbId})`);
-                    notFound++;
-                } else {
-                    await deleteSeries(series.id, series.title);
-                    if (!env.DRY_RUN) removed++;
-                }
+                await deleteSeries(series.id, series.title);
+                if (!env.DRY_RUN) removed++;
             }
             if (!env.DRY_RUN) {
                 deleted.add(slug);

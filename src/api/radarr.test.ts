@@ -22,8 +22,7 @@ jest.mock('../util/logger', () => ({
   error: jest.fn(),
 }));
 
-// Mock env
-jest.mock('../util/env', () => ({
+const mockEnv = {
   RADARR_API_URL: 'http://localhost:7878',
   RADARR_API_KEY: 'test-key',
   RADARR_QUALITY_PROFILE: 'HD-1080p',
@@ -31,7 +30,8 @@ jest.mock('../util/env', () => ({
   RADARR_TAGS: 'tag1,tag2',
   RADARR_ADD_UNMONITORED: false,
   DRY_RUN: false,
-}));
+};
+jest.mock('../util/env', () => mockEnv);
 
 // Import after mocking
 import {
@@ -45,6 +45,7 @@ import {
   getMovieByTmdbId,
   deleteMovie,
 } from './radarr';
+import logger from '../util/logger';
 
 describe('radarr API', () => {
   beforeEach(() => {
@@ -281,12 +282,12 @@ describe('radarr API', () => {
       expect(mockAxiosInstance.post).not.toHaveBeenCalled();
     });
 
-    it('should handle dry run mode', async () => {
-      // For this test, we can't easily change the env at runtime since it's already loaded
-      // Instead, we'll verify the logic by checking the env mock
-      // This test is more of an integration test that would need env variable changes
-      // For unit testing, we skip this as DRY_RUN is set at module load time
-      expect(true).toBe(true);
+    it('should log and skip API call in dry run mode', async () => {
+      mockEnv.DRY_RUN = true;
+      await addMovie(mockMovie, 2, '/movies', [1, 2], 'released');
+      expect(mockAxiosInstance.post).not.toHaveBeenCalled();
+      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('[DRY RUN]'), expect.anything());
+      mockEnv.DRY_RUN = false;
     });
 
     it('should handle movie already exists error', async () => {
@@ -307,10 +308,11 @@ describe('radarr API', () => {
     });
 
     it('should set monitored to false when RADARR_ADD_UNMONITORED is true', async () => {
-      // For this test, we can't easily change the env at runtime since it's already loaded
-      // This test would need to be an integration test with actual env variable changes
-      // For unit testing, we skip this as RADARR_ADD_UNMONITORED is set at module load time
-      expect(true).toBe(true);
+      mockEnv.RADARR_ADD_UNMONITORED = true;
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: { id: 1, title: 'Test Movie' } });
+      await addMovie(mockMovie, 2, '/movies', [1, 2], 'released');
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v3/movie', expect.objectContaining({ monitored: false }));
+      mockEnv.RADARR_ADD_UNMONITORED = false;
     });
   });
 
