@@ -1,6 +1,6 @@
 # lettarrboxd (fork)
 
-A fork of [ryanpage/lettarrboxd](https://github.com/ryanpag3/lettarrboxd) that adds **Sonarr TV sync** and **Letterboxd diary cleanup** on top of the original Radarr watchlist sync.
+A (vibecoded) fork of [ryanpage/lettarrboxd](https://github.com/ryanpag3/lettarrboxd) that adds **Sonarr TV sync** and **Letterboxd diary cleanup** on top of the original Radarr watchlist sync.
 
 ## What it does
 
