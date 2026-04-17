@@ -28,8 +28,9 @@ COPY package.json yarn.lock ./
 # Install only production dependencies
 RUN yarn install --frozen-lockfile --production && yarn cache clean
 
-# Copy built JavaScript from builder stage
+# Copy built JavaScript and health check from builder stage
 COPY --from=builder /app/dist ./dist
+COPY healthcheck.js ./
 
 # Create data directory
 RUN mkdir -p /data
@@ -52,8 +53,8 @@ USER lettarrboxd
 EXPOSE 3000
 
 # Health check
-HEALTHCHECK --interval=5m --timeout=30s --start-period=5s --retries=3 \
-  CMD node -e "console.log('Health check passed')" || exit 1
+HEALTHCHECK --interval=5m --timeout=10s --start-period=2m --retries=3 \
+  CMD node healthcheck.js
 
 # Start the application
 CMD ["node", "dist/index.js"]

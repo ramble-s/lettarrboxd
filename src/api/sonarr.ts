@@ -132,15 +132,15 @@ export async function addSeries(tvdbId: number, qualityProfileId: number, rootFo
 
 export async function upsertShows(movies: LetterboxdMovie[]): Promise<void> {
     const tvShows = movies.filter(m => m.tvTmdbId);
-if (tvShows.length === 0) return;
+    if (tvShows.length === 0) return;
 
     logger.info(`[sonarr] Processing ${tvShows.length} TV show(s)`);
 
     const qualityProfileId = await getQualityProfileId(env.SONARR_QUALITY_PROFILE!);
-    if (!qualityProfileId) throw new Error('Could not get Sonarr quality profile ID');
+    if (!qualityProfileId) { logger.error('Could not get Sonarr quality profile ID'); return; }
 
     const rootFolderPath = await getRootFolder();
-    if (!rootFolderPath) throw new Error('Could not get Sonarr root folder');
+    if (!rootFolderPath) { logger.error('Could not get Sonarr root folder'); return; }
 
     const existing = await getExistingTvdbIds();
 

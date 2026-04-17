@@ -3,7 +3,8 @@ import env from '../util/env';
 import logger from '../util/logger';
 import { getMovieByTmdbId, deleteMovie } from './radarr';
 
-const DELETED_FILE = '/data/deleted.json';
+const DATA_DIR = process.env.DATA_DIR ?? '/data';
+const DELETED_FILE = `${DATA_DIR}/deleted.json`;
 const LB_BASE = 'https://letterboxd.com';
 const FETCH_HEADERS = { 'User-Agent': 'Mozilla/5.0' };
 
