@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Fork of ryanpage/lettarrboxd. Syncs a Letterboxd list to Radarr (movies) and optionally Sonarr (TV shows). Optionally deletes Radarr movies when their Letterboxd diary entry is tagged with a cleanup tag. All three features run on the same interval from a single container.
+Fork of ryanpage/lettarrboxd. Syncs a Letterboxd list to Radarr (movies) and Sonarr (TV shows). Optionally deletes Radarr/Sonarr items when their Letterboxd diary entry is tagged with a cleanup tag. All features run on the same interval from a single container.
 
 New modules added in this fork: `src/api/sonarr.ts` (TV sync), `src/api/cleanup.ts` (diary cleanup).
 
@@ -12,7 +12,7 @@ New modules added in this fork: `src/api/sonarr.ts` (TV sync), `src/api/cleanup.
 
 ### Development
 - `yarn install` - Install dependencies
-- `yarn start` - Run the application using ts-node
+- `yarn start` - Run the compiled application (requires `yarn build` first)
 - `yarn start:dev` - Run with auto-reload during development using nodemon
 - `yarn build` - Compile TypeScript to JavaScript
 - `yarn tsc --noEmit` - Type check without emitting files
@@ -67,7 +67,6 @@ interface MoviesData {
 
 **Error Handling**: Each module handles errors gracefully without crashing the scheduler. Network failures and API errors are logged but don't stop the monitoring process.
 
-**Development Mode**: When `NODE_ENV=development`, the application limits processing to the first 5 movies for faster testing cycles.
 
 **Radarr Integration**: Movies are added with:
 - Specified quality profile from environment

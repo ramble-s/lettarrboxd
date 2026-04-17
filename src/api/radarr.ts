@@ -155,7 +155,7 @@ export async function upsertMovies(movies: LetterboxdMovie[]): Promise<void> {
 
     await Bluebird.map(movies, movie => {
         return addMovie(movie, qualityProfileId, rootFolderPath, tagIds, env.RADARR_MINIMUM_AVAILABILITY);
-    });
+    }, { concurrency: 10 });
 }
 
 export async function getMovieByTmdbId(tmdbId: number): Promise<{ id: number; title: string } | null> {
@@ -211,7 +211,6 @@ export async function addMovie(movie: LetterboxdMovie, qualityProfileId: number,
         const response = await axios.post('/api/v3/movie', payload);
 
         logger.info(`Successfully added movie: ${payload.title}`, response.data);
-        return response.data;
     } catch (e: any) {
         if (e.response?.status === 400 && (JSON.stringify(e.response?.data)).includes('This movie has already been added')) {
             logger.debug(`Movie ${movie.name} already exists in Radarr, skipping`);

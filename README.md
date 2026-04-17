@@ -6,7 +6,7 @@ A (vibecoded) fork of [ryanpage/lettarrboxd](https://github.com/ryanpag3/lettarr
 
 - **Radarr sync** — scrapes a Letterboxd list and adds movies to Radarr automatically
 - **Sonarr sync** — detects TV shows in the same list and adds them to Sonarr
-- **Diary cleanup** *(optional)* — watches your Letterboxd diary for entries tagged with a chosen tag (e.g. `cleanup`) and deletes the corresponding movie from Radarr
+- **Diary cleanup** *(optional)* — watches your Letterboxd diary for entries tagged with a chosen tag (e.g. `cleanup`) and deletes the corresponding item from Radarr or Sonarr
 
 All three run on the same interval from a single container.
 
@@ -19,10 +19,10 @@ services:
     container_name: lettarrboxd
     environment:
       - LETTERBOXD_URL=https://letterboxd.com/your_username/watchlist/
-      - RADARR_API_URL=http://radarr:7878
+      - RADARR_API_URL=YOUR_RADARR_URL
       - RADARR_API_KEY=your_radarr_api_key
       - RADARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
-      - SONARR_API_URL=http://sonarr:8989
+      - SONARR_API_URL=YOUR_SONARR_URL
       - SONARR_API_KEY=your_sonarr_api_key
       - SONARR_QUALITY_PROFILE=YOUR_QUALITY_PROFILE
     volumes:
@@ -60,6 +60,7 @@ docker run -d --env-file .env -v lettarrboxd-data:/data lettarrboxd
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `LOG_LEVEL` | `info` | Log verbosity: `error`, `warn`, `info`, `debug` |
 | `CHECK_INTERVAL_MINUTES` | `10` | How often to check (minimum 10) |
 | `RADARR_MINIMUM_AVAILABILITY` | `released` | `announced`, `inCinemas`, or `released` |
 | `RADARR_TAGS` | — | Comma-separated tags to apply in Radarr |
@@ -110,8 +111,6 @@ cp .env.example .env   # fill in your values
 yarn start:dev         # run with auto-reload
 yarn tsc --noEmit      # type check
 ```
-
-When `NODE_ENV=development` the app limits processing to the first 5 items for faster iteration.
 
 ## License
 

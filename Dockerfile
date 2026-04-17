@@ -49,9 +49,6 @@ RUN chown -R lettarrboxd:lettarrboxd /app /data
 # Switch to non-root user
 USER lettarrboxd
 
-# Expose port (optional, for health checks)
-EXPOSE 3000
-
 # Health check
 HEALTHCHECK --interval=5m --timeout=10s --start-period=2m --retries=3 \
   CMD node healthcheck.js
