@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Lettarrboxd is a TypeScript Node.js application that automatically syncs Letterboxd watchlist movies to Radarr. It continuously monitors a user's Letterboxd watchlist for new additions and automatically adds them to Radarr for download management.
+Fork of ryanpage/lettarrboxd. Syncs a Letterboxd list to Radarr (movies) and optionally Sonarr (TV shows). Optionally deletes Radarr movies when their Letterboxd diary entry is tagged with a cleanup tag. All three features run on the same interval from a single container.
+
+New modules added in this fork: `src/api/sonarr.ts` (TV sync), `src/api/cleanup.ts` (diary cleanup).
 
 ## Commands
 
