@@ -158,6 +158,29 @@ export async function upsertMovies(movies: LetterboxdMovie[]): Promise<void> {
     });
 }
 
+export async function getMovieByTmdbId(tmdbId: number): Promise<{ id: number; title: string } | null> {
+    try {
+        const response = await axios.get(`/api/v3/movie?tmdbId=${tmdbId}`);
+        return response.data?.[0] ?? null;
+    } catch (error) {
+        logger.error(`Error looking up Radarr movie tmdb:${tmdbId}:`, error);
+        return null;
+    }
+}
+
+export async function deleteMovie(radarrId: number, title: string): Promise<void> {
+    try {
+        if (env.DRY_RUN) {
+            logger.info(`[DRY RUN] Would delete from Radarr: "${title}" (id:${radarrId})`);
+            return;
+        }
+        await axios.delete(`/api/v3/movie/${radarrId}?deleteFiles=true&addImportExclusion=false`);
+        logger.info(`Deleted from Radarr: "${title}"`);
+    } catch (error) {
+        logger.error(`Error deleting Radarr movie id:${radarrId}:`, error);
+    }
+}
+
 export async function addMovie(movie: LetterboxdMovie, qualityProfileId: number, rootFolderPath: string, tagIds: number[], minimumAvailability: string): Promise<void> {
     try {
         logger.debug(`Adding movie to Radarr: ${movie.name}`);

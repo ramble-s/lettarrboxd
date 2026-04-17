@@ -20,18 +20,20 @@ export async function getMovie(link: string): Promise<LetterboxdMovie> {
 
 function extractMovieFromHtml(slug: string, html: string): LetterboxdMovie {
     const $ = cheerio.load(html);
-    
+
     const name = extractName($);
     const tmdbId = extractTmdbId($);
     const imdbId = extractImdbId($);
     const id = extractLetterboxdId($);
     const year = extractPublishedYear($);
-    
+    const tvTmdbId = extractTvTmdbId($);
+
     const letterboxdResult = {
         id,
         name,
         imdbId,
         tmdbId,
+        tvTmdbId,
         publishedYear: year,
         slug
     };
@@ -50,14 +52,21 @@ function extractTmdbId($: cheerio.CheerioAPI): string|null {
         logger.debug('Could not find TMDB link. This could happen if there is a TV show in the list.');
         return null;
     }
-    
+
     const tmdbMatch = tmdbLink.match(/\/movie\/(\d+)/);
     if (!tmdbMatch) {
-        logger.debug('Could not extract TMDB ID from link. This could happen because there is a TV show in the list.');
+        logger.debug('Could not extract TMDB movie ID from link. This could happen because there is a TV show in the list.');
         return null;
     }
-    
+
     return tmdbMatch[1];
+}
+
+function extractTvTmdbId($: cheerio.CheerioAPI): string|null {
+    const tmdbLink = $('a[data-track-action="TMDB"]').attr('href');
+    if (!tmdbLink) return null;
+    const tvMatch = tmdbLink.match(/\/tv\/(\d+)/);
+    return tvMatch ? tvMatch[1] : null;
 }
 
 function extractImdbId($: cheerio.CheerioAPI): string|null {

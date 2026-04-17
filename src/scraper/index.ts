@@ -8,6 +8,7 @@ export interface LetterboxdMovie {
     name: string;
     imdbId?: string|null;
     tmdbId?: string|null;
+    tvTmdbId?: string|null;
     publishedYear?: number|null;
     slug: string;
 }
