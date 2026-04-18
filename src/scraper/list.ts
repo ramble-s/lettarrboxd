@@ -1,6 +1,6 @@
 import * as cheerio from 'cheerio';
 import Bluebird from 'bluebird';
-import { LetterboxdMovie, LETTERBOXD_BASE_URL } from ".";
+import { LetterboxdMovie, LETTERBOXD_BASE_URL, FETCH_HEADERS } from ".";
 import { getMovie } from './movie';
 import logger from '../util/logger';
 import Scraper from './scraper.interface';
@@ -34,7 +34,7 @@ export class ListScraper implements Scraper {
         while (currentUrl) {
             logger.debug(`Fetching page: ${currentUrl}`);
             
-            const response = await fetch(currentUrl);
+            const response = await fetch(currentUrl, { headers: FETCH_HEADERS });
             if (!response.ok) {
                 throw new Error(`Failed to fetch list page: ${response.status}`);
             }

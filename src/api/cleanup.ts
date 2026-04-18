@@ -3,13 +3,13 @@ import env from '../util/env';
 import logger from '../util/logger';
 import { getMovieByTmdbId, deleteMovie } from './radarr';
 import { getMovie } from '../scraper/movie';
+import { FETCH_HEADERS } from '../scraper';
 import { findSeriesInSonarrByTmdbId, deleteSeries } from './sonarr';
 
 const DATA_DIR = process.env.DATA_DIR ?? '/data';
 const DELETED_FILE = `${DATA_DIR}/deleted-radarr.json`;
 const DELETED_SONARR_FILE = `${DATA_DIR}/deleted-sonarr.json`;
 const LB_BASE = 'https://letterboxd.com';
-const FETCH_HEADERS = { 'User-Agent': 'Mozilla/5.0' };
 
 function readDeleted(): Set<string> {
     try {

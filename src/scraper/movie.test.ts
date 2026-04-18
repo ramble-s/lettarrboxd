@@ -49,7 +49,7 @@ describe('movie scraper', () => {
         slug: '/film/the-matrix/',
       });
 
-      expect(global.fetch).toHaveBeenCalledWith('https://letterboxd.com/film/the-matrix/');
+      expect(global.fetch).toHaveBeenCalledWith('https://letterboxd.com/film/the-matrix/', { headers: { 'User-Agent': 'Mozilla/5.0' } });
     });
 
     it('should handle missing TMDB ID gracefully', async () => {
@@ -173,7 +173,7 @@ describe('movie scraper', () => {
 
       await getMovie('/film/test-movie/');
 
-      expect(global.fetch).toHaveBeenCalledWith('https://letterboxd.com/film/test-movie/');
+      expect(global.fetch).toHaveBeenCalledWith('https://letterboxd.com/film/test-movie/', { headers: { 'User-Agent': 'Mozilla/5.0' } });
     });
 
     it('should handle TMDB TV show link (no movie ID)', async () => {
