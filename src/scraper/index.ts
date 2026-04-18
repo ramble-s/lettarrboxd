@@ -26,6 +26,8 @@ export enum ListType {
 
 export const LETTERBOXD_BASE_URL = 'https://letterboxd.com';
 
+export const FETCH_HEADERS = { 'User-Agent': 'Mozilla/5.0' };
+
 const URL_PATTERNS = {
   [ListType.WATCHLIST]: /^https:\/\/letterboxd\.com\/[^\/]+\/watchlist\/?$/,
   [ListType.REGULAR_LIST]: /^https:\/\/letterboxd\.com\/[^\/]+\/list\/[^\/]+\/?$/,

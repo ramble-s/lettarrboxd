@@ -38,8 +38,7 @@ export async function getQualityProfileId(profileName: string): Promise<number |
             logger.debug(`Found quality profile: ${profileName} (ID: ${profile.id})`);
             return profile.id;
         } else {
-            logger.error(`Quality profile not found: ${profileName}`);
-            logger.debug('Available profiles:', profiles.map((p: any) => p.name));
+            logger.error(`Quality profile not found: "${profileName}". Available profiles: ${profiles.map((p: any) => p.name).join(', ')}`);
             return null;
         }
     } catch (error) {
@@ -67,17 +66,24 @@ export async function getRootFolder(): Promise<string | null> {
     }
 }
 
-export async function getRootFolderById(id: string) {
+export async function getRootFolderById(idOrPath: string): Promise<string | null> {
     try {
-        const response = await axios.get(`/api/v3/rootfolder/${id}`);
-        const { data } = response;
-        if (data) {
-            return data.path;
-        } else {
-            return null;
+        const numericId = parseInt(idOrPath, 10);
+        if (!isNaN(numericId)) {
+            const response = await axios.get(`/api/v3/rootfolder/${numericId}`);
+            if (response.data?.path) return response.data.path;
         }
+        const allResponse = await axios.get('/api/v3/rootfolder');
+        const folders: Array<{ id: number; path: string }> = allResponse.data;
+        const match = folders.find(f => f.path === idOrPath);
+        if (match) return match.path;
+        logger.error(
+            `Root folder "${idOrPath}" not found. Available folders:\n` +
+            folders.map(f => `  ID ${f.id}: ${f.path}`).join('\n')
+        );
+        return null;
     } catch (e) {
-        logger.error(`Error getting root folder by id: ${id}`);
+        logger.error(`Error getting root folder by id: ${idOrPath}`);
         return null;
     }
 }
