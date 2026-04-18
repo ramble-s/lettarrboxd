@@ -18,7 +18,7 @@ function startScheduledMonitoring(): void {
   if (env.RADARR_CLEANUP_ENABLED) logger.info('Radarr cleanup enabled.');
   if (env.SONARR_CLEANUP_ENABLED) logger.info('Sonarr cleanup enabled.');
 
-  run().catch(logger.error);
+  run().catch(e => logger.error(e));
 
   setInterval(async () => {
     try {
@@ -46,5 +46,5 @@ export { startScheduledMonitoring };
 
 // Only run main if this file is executed directly
 if (require.main === module) {
-  main().catch(logger.error);
+  main().catch(e => logger.error(e));
 }
