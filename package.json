@@ -1,6 +1,6 @@
 {
   "name": "lettarrboxd",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "main": "dist/index.js",
   "repository": "git@github.com:ramble-s/lettarrboxd.git",
   "author": "Ryan Page <ryanapage@gmail.com>",
@@ -34,6 +34,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.15",
     "express": "^5.1.0",
+    "glob": "^10.5.0",
     "jest": "^30.0.4",
     "ts-jest": "^29.4.0"
   }
