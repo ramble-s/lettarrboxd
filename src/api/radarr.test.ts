@@ -418,6 +418,14 @@ describe('radarr API', () => {
       );
     });
 
+    it('should log and skip API call in dry run mode', async () => {
+      mockEnv.DRY_RUN = true;
+      await deleteMovie(10, 'The Matrix');
+      expect(mockAxiosInstance.delete).not.toHaveBeenCalled();
+      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('[DRY RUN]'));
+      mockEnv.DRY_RUN = false;
+    });
+
     it('should log error on failure', async () => {
       mockAxiosInstance.delete.mockRejectedValueOnce(new Error('Network error'));
       await expect(deleteMovie(10, 'The Matrix')).resolves.toBeUndefined();
